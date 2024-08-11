@@ -1,0 +1,194 @@
+Nâng công su ất trạm biến áp 500kV Lai Châu                 TKKT  
+Phần I – Chương 2   16         CHƯƠNG 2:  CÁC QUY CHUẨN, TIÊU CHUẨN, QUY ĐỊNH VỀ 
+THIẾT KẾ, THI CÔNG VÀ NGHIỆM THU  
+2.1. QUY CHUẨN, TIÊU CHUẨN VỀ XÂY DỰNG  
+- Quy phạm trang bị điện  : 11 TCN (18 -21) - 2006 
+- Quy phạm nối đất và nối không các thiết bị điện : TCN 4756 - 1989 
+- Quyết định số 2896/QĐ -EVN-KTLĐ-TĐ ngày 10/10/2003 của Tổng Công ty 
+Điện Lực Việt Nam: Qui định về tiêu chuẩn kỹ thuật hệ thống điều khiển tích 
+hợp, cấu hình  hệ thống bảo vệ, quy cách kỹ thuật của rơ le bảo vệ cho đường 
+dây và TBA 500kV, 220kV, 110kV của EVN; Quy định về công tác thí nghiệm 
+đối với rơ le bảo vệ kỹ thuật số.  
+- Quyết định số 176/QĐ -EVN ngày 04/3/2016 của Tổng Công ty Điện lực Việt 
+Nam về việc ban hành Quy định Hệ thống điều khiển TBA 500kV, 220kV, 
+110kV trong Tập đoàn Điện lực Việt Nam. 
+- Quyết định số: 513/QĐ -EVN ngày 26/03/2008 của Tập đoàn Điện Lực Việt 
+Nam: Qui định nghiệm thu hệ thống tích hợp trạm biến áp.  
+- Quyết định số 55/QĐ -ĐTĐL ngày 22/08/2017 của cục Điề u tiết Điện Lực về 
+việc ban hành quy đị nh kỹ thuật và quản lý vận hành hệ  thống SCADA; 
+- Quyết định số: 348/QĐ -NPT ngày 27/04/2011 của Tổng công ty Truyền tải 
+điện Quốc gia: Qui định Xây dựng và quản lý hệ thống SCADA tại các trạm 
+biến áp. 
+- Quyết định số 1186/QĐ -EVN ngày 07/12/2011 của Tập đoàn Điện lực Việt 
+Nam: Quy trình an toàn điện.    
+- Văn bản số 1715/NPT -KT ngày 22/12/2008 của Tổng công ty Truyền tải điện 
+Quốc gia: Hướng dẫn thực hiện chủ trương không khống chế các nhà sản xuất 
+Rơle. 
+- Quyết định số  0032/QĐ-EVNNPT ngày 19/03/2019 của Tổng Công ty Truyền tải 
+Điện Quốc gia: Qui định Đặc tính kỹ thuật cơ bản MBA 220kV –  250MVA lưới 
+điện truyền tải.  
+- Thông tư 25/2016/TT -BCT ngày 30/11/2016 của Bộ Công Thương: Qui định hệ 
+thống truyền.  
+- Các tiêu chuẩn quốc tế: IEC, ISO và các tiêu chuẩn tương đương khác.  
+- Quy chuẩn Quy hoạch xây dựng ban hành theo Quyết định số 04/2008/QĐ -
+BXD ngày 3/4/2008 của Bộ trưởng Bộ Xây dựng;  
+- QCXDVN 01:2008/BXD: Quy chuẩn xây dựng Việt Nam về quy hoạch xây 
+dựng; 
+
+Nâng công su ất trạm biến áp 500kV Lai Châu                 TKKT  
+Phần I – Chương 2   17         - Tiêu chuẩn TCVN 8819:2011 “Mặt đường bê tông nhựa nóng –  Yêu cầu thi 
+công và nghiệm thu”.  
+- TCVN 5308:19 91: Quy phạm kỹ thuật an toàn trong xây dựng;  
+- TCVN 4447:2012 : Công tác đất – Thi công và nghiệm thu;  
+- TCVN 4506:2012: Nước trộn bê tông và vữa - Yêu cầu kỹ thuật;  
+- TCVN 7570: 2006: Cốt liệu cho bê tông và vữa. Yêu cầu kỹ thuật;  
+- TCVN 7572: 2006: Cốt liệu cho bê tông và vữa. Phương pháp thử;  
+- TCVN 3118:1993: Bê tông nặng - Phương pháp xác định cường độ nén;  
+- TCVN 3119:1993: Bê tông nặng - Phương pháp xác định cường độ kéo khi 
+uốn; 
+- TCVN 3106:1993: Hỗn hợp bê tông nặng - Phương pháp thử độ sụt;  
+- TCVN 1651-201 8: Thép cốt bê tông  – Yêu cầu kỹ thuật; 
+- TCVN 197:2002; TCVN 198: 1985:  Kéo, uốn thử cốt thép;  
+- TCVN 4453:19 95: Kết cấu bê tông và bê tông cốt thép toàn khối. Quy phạm thi 
+công và nghiệm thu;  
+- TCVN 5637: 1991: Quản lý chất lượng xây lắp công trình xây dựng - Nguyên 
+tắc cơ bản;  
+- TCVN 5638: 1991: Đánh giá chất lượng công tác xây lắp –  Nguyên tắc cơ bản;  
+- TCVN 5640: 1991: Bàn giao công trình xây dựng –  Nguyên tắc cơ bản;  
+- TCVN 4252: 2012 : Quy trình lập thiết kế tổ chức xây dựng và thiết kế thi công. 
+Quy phạm thi công và nghiệm thu;  
+- TCVN 9361:2012: Công tác nền móng –  Thi công và nghiệm thu;  
+- TCVN 9262-1:2012 (ISO 7976- 1:1989): Dung sai trong xây dựng công trình –
+Phương pháp đo kiểm công trình và cấu kiện chế sẵn của công trình –  Phần 1: 
+Phương pháp và dụng cụ đo;  
+- TCVN 9345:2012: Kết cấu bê tông và bê tông cốt thép - Hướng dẫn kỹ thuật 
+phòng chống nứt dưới tác động của khí hậu nóng ẩm;  
+- TCVN 9390:2012: Thép cốt bê tông –  Mối nối bằng dập ép ống –  Yêu cầu thiết 
+kế thi công và nghiệm thu;  
+- TCVN 5017-1:2010 (ISO 857-1:1998): Hàn và các quá trình liên quan - Từ 
+vựng - Phần 1: Các quá trình hàn kim loại;  
+- TCVN 5017-2:2010 (ISO 857-2:1998): Hàn và các quá trình liên quan - Từ 
+vựng - Phần 2: Các quá trình hàn vẩy  mềm, hàn vảy cứng và các thuật ngữ liên 
+quan; 
+- TCVN 9392:2012: Thép cốt bê tông - Hàn hồ quang;  
+
+Nâng công su ất trạm biến áp 500kV Lai Châu                 TKKT  
+Phần I – Chương 2   18         - TCVN 3223: 2000 : Que hàn điện dùng cho thép các bon và thép hợp kim thấp;  
+- TCVN 3909: 1994: Que hàn điện dùng cho thép các bon và thép hợp kim thấp. 
+Phương pháp thử;  
+- TCVN 1691: 1975: Mối hàn hồ quang điện bằng tay;  
+- JISG3101, 3106/3192, OCT8509-72, TCVN 1656- 1993: Các tiêu chuẩn thép 
+hình và thép tấm ; 
+- 18TCN 04- 92: Mạ kẽm nhúng nóng;  
+- TCVN 1876-76, TCVN1896- 76: Các tiêu chuẩn về Bu lông, đai ốc;  
+- TCVN 134-77, TCVN 2061- 77: Vòng đệm phẳng;  
+- TCVN 130- 77: Vòng đệm vênh;  
+- TCXDVN 170:2007 : Kết cấu thép - Gia công lắp ráp và nghiệm thu -Yêu cầu 
+kỹ thuật;  
+- TCVN 9259-1:2012 (ISO 3443- 1:1979): Dung sai trong xây dựng công trình -
+Nguyên tắc cơ bản để đánh giá và yêu cầu kỹ thuật ; 
+- TCVN 9261:2012 (ISO 1803:1997): Xây dựng công trình - Dung sai – Cách thể 
+hiện độ chính xác kích thước –  Nguyên tắc và thuật ngữ;  
+- TCVN 9342:2012: Công trình bê tông cốt thép toàn khối xây dựng bằng cốp 
+pha trượt - Thi công và nghiệm thu;  
+- TCVN 9340:2012: Hỗn hợp bê tông trộn sẵn –  Yêu cầu cơ bản đánh giá chất 
+lượng và nghiệm thu;  
+- TCVN 9338:2012: Hỗn hợp bê tông nặng –  Phương pháp xác định thời gian 
+đông kết;  
+- TCVN 9115:2012: Kết cấu bê tông và bê tông cốt thép lắp ghép - Thi công và 
+nghiệm thu;  
+- TCVN 9116:2012: C ống hộp bê tông cốt thép;  
+- TCVN 9113 : 2012: Ống bê tông cốt thép thoát nước;  
+- TCVN 8828:2011: Bê tông - Yêu cầu bảo dưỡng ẩm tự nhiên;  
+- TCVN 9343:2012: Kết cấu bê tông và bê tông cốt thép - Hướng dẫn công tác 
+bảo trì; 
+- TCVN 9404:2012: Sơn xây dựng - Phân loại;  
+- TCVN 8790:2011: Sơn bảo vệ kết cấu thép –  Qui trình thi công và nghiệm thu;  
+- TCVN 9065 : 2012: Vật liệu chống thấm - Sơn nhũ tương bi tum;  
+- TCVN 9377- 1:2012: Công tác hoàn thiện trong xây dựng - Thi công và nghiệm 
+thu - Phần 1 : Công tác lát và láng trong xây dựng;  
+
+Nâng công su ất trạm biến áp 500kV Lai Châu                 TKKT  
+Phần I – Chương 2   19         - TCVN 9377- 2:2012: Công tác hoàn thiện trong xây dựng –  Thi công và nghiệm 
+thu – Phần 2: Công tác trát trong xây dựng;  
+- TCVN 9377- 3:2012: Công tác hoàn thiện trong xây dựng –  Thi công và nghiệm 
+thu – Phần 3: Công tác ốp trong xây dựng;  
+2.2. QUY CHUẨN, TIÊU CHUẨN PHẦN ĐIỆN  
+- Quy chuẩn kỹ thuật quốc gia về kỹ thuật điện QCVN QTĐ -5 : 2009 BCT Ban 
+hành kèm theo quyết định số: 54/2008/TT -BCT ngày 30 tháng 12 năm 2008;  
+- Quy chuẩn kỹ thuật quốc gia về kỹ thuật điện QCVN QTĐ -7 : 2009 BCT Ban 
+hành kèm theo quyết định số: 40/2009/TT -BCT ngày 31 tháng 12 năm 2009;  
+- Quy chuẩn kỹ thuật quốc gia về kỹ thuật điện hạ áp QCVN QTĐ -8 : 2010 BCT 
+Ban hành kèm theo quyết định số: 04/2011/TT -BCT ngày 16 tháng 2 năm 2011;  
+- Các tiêu chuẩn của ngành bưu chính viễn thông: TCN  68; 
+- TCN 68-178:1999 : Quy phạm xây dựng công trình thông tin cáp quang.  
+- Tiêu chuẩn ITU -T 
+- IEC 62271- 100 tiêu chuẩn máy cắt;  
+- IEC 62271- 102 tiêu chuẩn dao cách ly;  
+- IEC-61869- 1,2: Tiêu chuẩn về biến dòng điện  
+- IEC-61869- 3,5: Tiêu chuẩn về biến điện áp  
+- IEC 60099-4 tiêu ch uẩn chống sét van;  
+- IEC-60255 Tiêu chuẩn Rơ le điện;  
+- IEC61089- Tiêu chuẩn về dây dẫn;  
+- IEC 60273- Tiêu chuẩn về cách điện đứng;  
+- IEC 60305- Tiêu chuẩn về cách điện;  
+- TCVN 9206 – 2012 Quy phạm đặt đường dây điện trong nhà ở và công trình 
+công cộng;  
+- Quy phạm trang bị điện 11TCN –  18,19,20,21 –2006 – Bộ Công nghiệp nay là  
+Bộ Công thương;  
+- TCVN 7114 – 2002: Nguyên lý ECGÔNÔMI thị giác chiếu sáng cho hệ thống 
+làm việc trong nhà;  
+- QCXDVN 09: 2005: Các công trình xây dựng sử dụng năng lượng có hiệu quả.  
+- Hướng dẫn thiết kế lắp đặt điệ n theo tiêu chu ẩn quốc tế IEC; 
+- TCXDVN 9207:2012: Lắp đặt thiết bị điện trong nhà ở và công trình công cộng  ; 
+- TCVN 9385- 2012: Chống sét cho công trình xây dựng –  Hướng dẫn thiết kế, 
+kiểm tra và bảo trì hệ thống;  
+
+Nâng công su ất trạm biến áp 500kV Lai Châu                 TKKT  
+Phần I – Chương 2   20         - TCVN 9358:2012: Lắp đặt hệ thống nối đất thiết bị cho các công trình công 
+nghiệp - Yêu cầu chung;  
+- TCVN 9208:2012: Lắp đặt cáp và dây điện cho các công trình công nghiệp;  
+- TCVN 7447 (gồm 14 TCVN): Hệ thống lắp đặt điện hạ áp;  
+- TCVN 3288:1979: Hệ thống  thông gió - Yêu cầu chung về a n toàn; 
+- TCVN 5687- 2010: Thông gió, điều tiết không khí, sưởi ấm.  
+2.3. QUY CHUẨN, TIÊU CHUẨN, QUY ĐỊNH  VỀ HỆ THỐNG PCCC  
+- Luật phòng cháy và chữa cháy số 27/2001/QH10 ngày 29/6/2001;  
+- Luật số 40/2013/QH13 ngày 22/11/2013 của Quốc hội về sửa đổi, bổ sung một 
+số điều của Luật P hòng cháy chữa cháy số 27/2001/QH10.  
+- Nghị định số 136/2020/NĐ -CP ngày 24/11/2020 của Chính phủ quy định chi 
+tiết một số điều và biện pháp thi hành Luật phòng cháy và chữa cháy và Luật 
+sửa đổi, bổ sung một số điều của Luật phòng cháy và chữa cháy ; 
+- TCVN 3254:1989. An toàn cháy- Yêu cầu chung.  
+- TCVN 3255:1989. An toàn nổ -Yêu cầu chung.  
+- TCVN 5279:1990. An toàn cháy nổ. Bụi cháy -Yêu cầu chung.  
+- TCVN 5760:1993. Hệ thống chữa cháy -Yêu cầu chung về lắp đặt và sử dụng.  
+- TCVN 2622:1995. Phòng cháy, chống cháy cho nhà và công trình -Yêu cầu thiết 
+kế. 
+- TCVN 6379:1998. Thiết bị chữa cháy -Trụ nước chữa cháy -Yêu cầu kỹ thuật.  
+- TCVN 5738:2001. Hệ thống báo cháy tự động -Yêu cầu kỹ thuật.  
+- TCVN 7026:2002. Chữa cháy - Bình chữa cháy xách tay - Tính năng và cấu 
+tạo. 
+- TCVN 702 7:2002. Chữa cháy - Xe đẩy chữa cháy - Tính năng và cấu tạo.  
+- TCVN 7435:2004. PCCC. Bình chữa cháy xách tay và xe đẩy chữa cháy.  
+- TCVN 7568:2006. Hệ thống báo cháy. Phần 1: Qui định chung và định nghĩa.  
+- TCVN 5740:2009. Thiết bị chữa cháy -Vòi đẩy chữ a cháy-Vòi đẩy bằng sợi 
+tổng hợp tráng cao su.  
+- TCVN 8060:2009. Phương tiện chữa cháy. Vòi chữa cháy. Vòi hút bằng cao su, 
+chất dẻo và cụm vòi.  
+- QCVN 06:2021 /BXD. Quy chuẩn kỹ thuật quốc gia an toàn cháy cho nhà và 
+công trình. 
+- TCVN 733 6:2003. Hệ thống Spinkler tự độ ng – yêu cầu thiết kế và lắp đặt  
+- NFPA -15 Tham khảo tiêu chuẩn thiết kế giàn phun nước cố định MBA.  
+
+Nâng công su ất trạm biến áp 500kV Lai Châu                 TKKT  
+Phần I – Chương 2   21         - Quyết định số 2062/EVN -KTSX ngày 27/05/2010 của Tập đoàn Điện lực Việt 
+Nam: Thực hiện Tiêu chuẩn Quốc gia về phòng cháy và chữa cháy.  
+- Quyết định số 2062/EVN -KTSX ngày 27/05/2010 của Tập đoàn Điện lực Việt 
+Nam: Thực hiện Tiêu chuẩn Quốc gia về phòng cháy và chữa cháy.  
+- Quy chế thực hiện công tác phòng cháy và chữa cháy cho các dự án công trình 
+điện ban hành kèm theo Quyết định số 1428/QĐ -EVN ngày 22/11/2019 của  
+Tập đoàn điện lực Việt Nam;  
+- Quyết định số: 1428/QĐ -EVN ngày 22/11/2018 của Tập đoàn điện lực Việt 
+Nam về việc ban hành Quy định công tác an toàn trong Tập đoàn Điện lực 
+Quốc gia Việt Nam.  
+

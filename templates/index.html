@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phrase Finder</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f0f4f8;
+        color: #333;
+      }
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      #upload-form {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      input[type="file"] {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      button {
+        background-color: #3498db;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #2980b9;
+      }
+      #results {
+        margin-top: 30px;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      #results h2 {
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+      }
+      #results p {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+      }
+      #results strong {
+        color: #2c3e50;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Phrase Finder</h1>
+    <form id="upload-form">
+      <input type="file" id="pdf-file" accept=".pdf" required />
+      <button type="submit">Upload and Process</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+      document
+        .getElementById("upload-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          var formData = new FormData();
+          var fileInput = document.getElementById("pdf-file");
+          formData.append("file", fileInput.files[0]);
+
+          fetch("/upload", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              var resultsDiv = document.getElementById("results");
+              if (Array.isArray(data) && data.length > 0) {
+                var html = `<h2>Results: (${data.length})</h2>`;
+                data.forEach((item) => {
+                  html += `
+                <p>
+                  <strong>Phrase:</strong> ${item.phrase}<br>
+                  <strong>Page:</strong> ${item.page}, <strong>Line:</strong> ${
+                    item.line
+                  }<br>
+                  <strong>Base Text:</strong> ${item.base_text}<br>
+                  ${
+                    item.after_text
+                      ? `<strong>After Text:</strong> ${item.after_text}<br>`
+                      : ""
+                  }
+                  ${
+                    item.updated_phrase
+                      ? `<strong>Updated Phrase:</strong> ${item.updated_phrase}`
+                      : ""
+                  }
+                </p>`;
+                });
+                resultsDiv.innerHTML = html;
+              } else if (data.error) {
+                resultsDiv.innerHTML = "<p>Error: " + data.error + "</p>";
+              } else {
+                resultsDiv.innerHTML = "<p>No matching phrases found.</p>";
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              document.getElementById("results").innerHTML =
+                "<p>An error occurred while processing the file.</p>";
+            });
+        });
+    </script>
+  </body>
+</html>
