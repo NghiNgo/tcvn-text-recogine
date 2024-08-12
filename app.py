@@ -2,6 +2,8 @@ import os
 from flask import Flask, request, jsonify, render_template
 from PyPDF2 import PdfReader
 import re
+import pandas as pd
+from openpyxl import load_workbook
 
 app = Flask(__name__)
 
@@ -21,6 +23,26 @@ def process_pdf(pdf_file):
         r"TCVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"QCVN(?:\s+\w+)?(?:[-:]\d+)?(?:\s*:\s*\d+)?"
     ]
+
+    # Load the Excel file
+    df = pd.read_excel('TCKT.xlsx')
+    print(f"Excel file columns: {df.columns.tolist()}")
+    
+    # Use the first and last three columns
+    first_col = df.columns[1]
+    last_col_3 = df.columns[-3]
+    last_col_2 = df.columns[-2]
+    last_col_1 = df.columns[-1]
+    
+    check_phrases = df[first_col].str.strip().tolist()
+    results_dict = {
+        'col_-3': dict(zip(df[first_col].str.strip(), df[last_col_3])),
+        'col_-2': dict(zip(df[first_col].str.strip(), df[last_col_2])),
+        'col_-1': dict(zip(df[first_col].str.strip(), df[last_col_1]))
+    }
+
+    def handle_nan(value):
+        return None if pd.isna(value) else value
     
     pages = text.split('\n\n')
     for page_num, page_text in enumerate(pages, 1):
@@ -40,7 +62,7 @@ def process_pdf(pdf_file):
                     index = page_text.find(base_text, match.start())
                     if index != -1:
                         n_index = index + 4  # Index of "N" in "TCVN" or "QCVN"
-                        after_text = page_text[n_index:n_index+15].strip()
+                        after_text = page_text[n_index:n_index+20].strip()
                 
                 # Create formatted_after_text with all spaces removed
                 formatted_after_text = re.sub(r'\s+', '', after_text)
@@ -48,13 +70,23 @@ def process_pdf(pdf_file):
                 # Create updated_phrase by combining base_text and formatted_after_text
                 updated_phrase = f"{base_text} {formatted_after_text}" if base_text and formatted_after_text else ""
                 
+                # Find matching check_phrase and get the corresponding results
+                matching_check_phrase = next((check_phrase for check_phrase in check_phrases if check_phrase in updated_phrase), None)
+                matching_result_3 = handle_nan(results_dict['col_-3'].get(matching_check_phrase)) if matching_check_phrase else None
+                matching_result_2 = handle_nan(results_dict['col_-2'].get(matching_check_phrase)) if matching_check_phrase else None
+                matching_result_1 = handle_nan(results_dict['col_-1'].get(matching_check_phrase)) if matching_check_phrase else None
+
                 results.append({
                     "phrase": phrase,
                     "page": page_num,
                     "line": line_num,
                     "base_text": base_text,
                     "after_text": after_text,
-                    "updated_phrase": updated_phrase
+                    "updated_phrase": updated_phrase,
+                    "matching_check_phrase": matching_check_phrase,
+                    "matching_result_3": matching_result_3,
+                    "matching_result_2": matching_result_2,
+                    "matching_result_1": matching_result_1
                 })
 
     return results
