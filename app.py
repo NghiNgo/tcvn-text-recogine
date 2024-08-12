@@ -26,7 +26,6 @@ def process_pdf(pdf_file):
 
     # Load the Excel file
     df = pd.read_excel('TCKT.xlsx')
-    print(f"Excel file columns: {df.columns.tolist()}")
     
     # Use the first and last three columns
     first_col = df.columns[1]
@@ -56,7 +55,7 @@ def process_pdf(pdf_file):
                 line_num = page_text[:match.start()].count('\n') + 1
                 base_text = "TCVN" if phrase.startswith("TCVN") else "QCVN" if phrase.startswith("QCVN") else ""
                 
-                # Get 15 characters after "N" in "TCVN" or "QCVN"
+                # Get 20 characters after "N" in "TCVN" or "QCVN"
                 after_text = ""
                 if base_text in ["TCVN", "QCVN"]:
                     index = page_text.find(base_text, match.start())
