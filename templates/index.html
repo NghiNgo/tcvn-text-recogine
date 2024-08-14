@@ -133,10 +133,13 @@
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         margin-bottom: 30px;
         display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
         align-items: center;
       }
 
-      #search-input {
+      #search-input,
+      #standard-type-select {
         flex-grow: 1;
         padding: 10px;
         border: 2px solid #ddd;
@@ -145,13 +148,14 @@
         font-family: "Open Sans", sans-serif;
       }
 
-      #search-input:focus {
+      #search-input:focus,
+      #standard-type-select:focus {
         outline: none;
         border-color: #3498db;
       }
 
       #search-container button {
-        margin-left: 10px;
+        flex-shrink: 0;
       }
     </style>
   </head>
@@ -163,13 +167,13 @@
     </form>
     <div id="search-container" style="display: none">
       <input type="text" id="search-input" placeholder="Search results..." />
-      <select id="standard-type-select">
+      <button onclick="applyFilters()">Search</button>
+      <select id="standard-type-select" onchange="applyFilters()">
         <option value="all">All Types</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
         <option value="Unknown">Unknown</option>
       </select>
-      <button onclick="searchResults()">Search</button>
     </div>
     <div
       id="loading"
@@ -213,7 +217,7 @@
               filteredResults = allResults;
               displayResults(1);
               document.getElementById("search-container").style.display =
-                "block";
+                "flex";
             })
             .catch((error) => {
               console.error("Error:", error);
@@ -314,7 +318,7 @@
         return paginationHtml;
       }
 
-      function searchResults() {
+      function applyFilters() {
         const searchTerm = document
           .getElementById("search-input")
           .value.toLowerCase();
