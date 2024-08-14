@@ -3,7 +3,10 @@ from flask import Flask, request, jsonify, render_template
 from PyPDF2 import PdfReader
 import re
 import pandas as pd
-from openpyxl import load_workbook
+import numpy as np
+import json
+import concurrent.futures
+
 
 app = Flask(__name__)
 
@@ -16,8 +19,6 @@ def extract_text_from_pdf(pdf_file):
 
 def process_pdf(pdf_file):
     text = extract_text_from_pdf(pdf_file)
-    with open('text.txt', 'w', encoding='utf-8') as file:
-        file.write(text)
     results = []
     patterns = [
         r"TCVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
@@ -29,53 +30,46 @@ def process_pdf(pdf_file):
     
     # Use the first and last three columns
     first_col = df.columns[1]
-    last_col_3 = df.columns[-3]
-    last_col_2 = df.columns[-2]
-    last_col_1 = df.columns[-1]
+    last_cols = df.columns[-3:]
     
     check_phrases = df[first_col].str.strip().tolist()
     results_dict = {
-        'col_-3': dict(zip(df[first_col].str.strip(), df[last_col_3])),
-        'col_-2': dict(zip(df[first_col].str.strip(), df[last_col_2])),
-        'col_-1': dict(zip(df[first_col].str.strip(), df[last_col_1]))
+        f'col_{i}': dict(zip(df[first_col].str.strip(), df[col]))
+        for i, col in enumerate(last_cols, start=-3)
     }
 
     def handle_nan(value):
-        return None if pd.isna(value) else value
-    
-    pages = text.split('\n\n')
-    for page_num, page_text in enumerate(pages, 1):
+        if pd.isna(value) or (isinstance(value, float) and np.isnan(value)):
+            return None
+        return value
+
+    def process_page(page_data):
+        page_num, page_text = page_data
+        page_results = []
         for pattern in patterns:
             matches = re.finditer(pattern, page_text, re.IGNORECASE)
             for match in matches:
-                phrase = match.group().strip()
-                # Remove all spaces within the phrase
-                phrase = re.sub(r'\s+', '', phrase)
+                phrase = re.sub(r'\s+', '', match.group().strip())
                 
                 line_num = page_text[:match.start()].count('\n') + 1
                 base_text = "TCVN" if phrase.startswith("TCVN") else "QCVN" if phrase.startswith("QCVN") else ""
                 
-                # Get 20 characters after "N" in "TCVN" or "QCVN"
                 after_text = ""
-                if base_text in ["TCVN", "QCVN"]:
+                if base_text:
                     index = page_text.find(base_text, match.start())
                     if index != -1:
-                        n_index = index + 4  # Index of "N" in "TCVN" or "QCVN"
-                        after_text = page_text[n_index:n_index+20].strip()
+                        after_text = re.sub(r'\s+', '', page_text[index+4:index+24].strip())
                 
-                # Create formatted_after_text with all spaces removed
-                formatted_after_text = re.sub(r'\s+', '', after_text)
+                updated_phrase = f"{base_text} {after_text}" if base_text and after_text else ""
                 
-                # Create updated_phrase by combining base_text and formatted_after_text
-                updated_phrase = f"{base_text} {formatted_after_text}" if base_text and formatted_after_text else ""
-                
-                # Find matching check_phrase and get the corresponding results
-                matching_check_phrase = next((check_phrase for check_phrase in check_phrases if check_phrase in updated_phrase), None)
-                matching_result_3 = handle_nan(results_dict['col_-3'].get(matching_check_phrase)) if matching_check_phrase else None
-                matching_result_2 = handle_nan(results_dict['col_-2'].get(matching_check_phrase)) if matching_check_phrase else None
-                matching_result_1 = handle_nan(results_dict['col_-1'].get(matching_check_phrase)) if matching_check_phrase else None
+                updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
+                matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
+                matching_results = [
+                    handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
+                    for i in range(-3, 0)
+                ] if matching_check_phrase else [None] * 3
 
-                results.append({
+                page_results.append({
                     "phrase": phrase,
                     "page": page_num,
                     "line": line_num,
@@ -83,12 +77,22 @@ def process_pdf(pdf_file):
                     "after_text": after_text,
                     "updated_phrase": updated_phrase,
                     "matching_check_phrase": matching_check_phrase,
-                    "matching_result_3": matching_result_3,
-                    "matching_result_2": matching_result_2,
-                    "matching_result_1": matching_result_1
+                    "matching_result_3": matching_results[0],
+                    "matching_result_2": matching_results[1],
+                    "matching_result_1": matching_results[2],
+                    "standard_type": "TCVN" if phrase.startswith("TCVN") else "QCVN" if phrase.startswith("QCVN") else "Unknown",
+                    "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
+                    "full_reference": f"{base_text} {after_text}".strip()
                 })
+                
+        return page_results
 
-    return results
+    pages = list(enumerate(text.split('\n\n'), 1))
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = list(executor.map(process_page, pages))
+    
+    return [item for sublist in results for item in sublist]
+
 
 @app.route('/')
 def index():
@@ -103,12 +107,12 @@ def upload_file():
         return jsonify({"error": "No selected file"}), 400
     if file and file.filename.endswith('.pdf'):
         results = process_pdf(file)
-        return jsonify(results)
+        return json.dumps(results, ensure_ascii=False, default=str)
     else:
         return jsonify({"error": "Invalid file type"}), 400
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)

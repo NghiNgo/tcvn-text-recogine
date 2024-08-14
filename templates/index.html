@@ -125,6 +125,34 @@
           transform: rotate(360deg);
         }
       }
+
+      #search-container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+      }
+
+      #search-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        transition: border-color 0.3s;
+        font-family: "Open Sans", sans-serif;
+      }
+
+      #search-input:focus {
+        outline: none;
+        border-color: #3498db;
+      }
+
+      #search-container button {
+        margin-left: 10px;
+      }
     </style>
   </head>
   <body>
@@ -133,6 +161,16 @@
       <input type="file" id="pdf-file" accept=".pdf" required />
       <button type="submit">Upload and Process</button>
     </form>
+    <div id="search-container" style="display: none">
+      <input type="text" id="search-input" placeholder="Search results..." />
+      <select id="standard-type-select">
+        <option value="all">All Types</option>
+        <option value="TCVN">TCVN</option>
+        <option value="QCVN">QCVN</option>
+        <option value="Unknown">Unknown</option>
+      </select>
+      <button onclick="searchResults()">Search</button>
+    </div>
     <div
       id="loading"
       style="display: none; text-align: center; margin-top: 20px"
@@ -144,6 +182,7 @@
 
     <script>
       let allResults = [];
+      let filteredResults = [];
       const itemsPerPage = 10;
       let currentPage = 1;
 
@@ -155,26 +194,35 @@
           var fileInput = document.getElementById("pdf-file");
           formData.append("file", fileInput.files[0]);
 
-          // Show loading indicator
           document.getElementById("loading").style.display = "block";
           document.getElementById("results").innerHTML = "";
+          document.getElementById("search-container").style.display = "none";
 
           fetch("/upload", {
             method: "POST",
             body: formData,
           })
-            .then((response) => response.json())
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.json();
+            })
             .then((data) => {
               allResults = data;
+              filteredResults = allResults;
               displayResults(1);
+              document.getElementById("search-container").style.display =
+                "block";
             })
             .catch((error) => {
               console.error("Error:", error);
               document.getElementById("results").innerHTML =
-                "<p>An error occurred while processing the file.</p>";
+                "<p>An error occurred while processing the file: " +
+                error.message +
+                "</p>";
             })
             .finally(() => {
-              // Hide loading indicator
               document.getElementById("loading").style.display = "none";
             });
         });
@@ -183,18 +231,24 @@
         currentPage = page;
         const startIndex = (page - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
-        const pageResults = allResults.slice(startIndex, endIndex);
+        const pageResults = filteredResults.slice(startIndex, endIndex);
 
         var resultsDiv = document.getElementById("results");
         if (pageResults.length > 0) {
-          var html = `<h2>Results: (${allResults.length})</h2>`;
-          pageResults.forEach((item) => {
-            html += `
+          var html = `<h2>Results: (${filteredResults.length})</h2>`;
+
+          // Group results by standard_type
+          const groupedResults = groupByStandardType(pageResults);
+
+          for (const [standardType, items] of Object.entries(groupedResults)) {
+            html += `<h3>${standardType}</h3>`;
+            items.forEach((item) => {
+              html += `
               <div class="result-item">
                 <strong>Phrase:</strong> ${item.phrase}<br>
                 <strong>Page:</strong> ${item.page}, <strong>Line:</strong> ${
-              item.line
-            }<br>
+                item.line
+              }<br>
                 <strong>Base Text:</strong> ${item.base_text}<br>
                 ${
                   item.after_text
@@ -227,19 +281,27 @@
                     : ""
                 }
               </div>`;
-          });
+            });
+          }
 
           html += generatePagination();
           resultsDiv.innerHTML = html;
-        } else if (allResults.error) {
-          resultsDiv.innerHTML = "<p>Error: " + allResults.error + "</p>";
+        } else if (filteredResults.error) {
+          resultsDiv.innerHTML = "<p>Error: " + filteredResults.error + "</p>";
         } else {
           resultsDiv.innerHTML = "<p>No matching phrases found.</p>";
         }
       }
 
+      function groupByStandardType(results) {
+        return results.reduce((acc, item) => {
+          (acc[item.standard_type] = acc[item.standard_type] || []).push(item);
+          return acc;
+        }, {});
+      }
+
       function generatePagination() {
-        const totalPages = Math.ceil(allResults.length / itemsPerPage);
+        const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
         let paginationHtml = '<div class="pagination">';
 
         for (let i = 1; i <= totalPages; i++) {
@@ -250,6 +312,40 @@
 
         paginationHtml += "</div>";
         return paginationHtml;
+      }
+
+      function searchResults() {
+        const searchTerm = document
+          .getElementById("search-input")
+          .value.toLowerCase();
+        const selectedType = document.getElementById(
+          "standard-type-select"
+        ).value;
+
+        filteredResults = allResults.filter((item) => {
+          const matchesSearch =
+            item.phrase.toLowerCase().includes(searchTerm) ||
+            item.base_text.toLowerCase().includes(searchTerm) ||
+            (item.after_text &&
+              item.after_text.toLowerCase().includes(searchTerm)) ||
+            (item.updated_phrase &&
+              item.updated_phrase.toLowerCase().includes(searchTerm)) ||
+            (item.matching_check_phrase &&
+              item.matching_check_phrase.toLowerCase().includes(searchTerm)) ||
+            (item.matching_result_3 &&
+              item.matching_result_3.toLowerCase().includes(searchTerm)) ||
+            (item.matching_result_2 &&
+              item.matching_result_2.toLowerCase().includes(searchTerm)) ||
+            (item.matching_result_1 &&
+              item.matching_result_1.toLowerCase().includes(searchTerm));
+
+          const matchesType =
+            selectedType === "all" || item.standard_type === selectedType;
+
+          return matchesSearch && matchesType;
+        });
+
+        displayResults(1);
       }
     </script>
   </body>
