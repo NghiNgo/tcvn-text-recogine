@@ -511,9 +511,10 @@ This guide will walk you through the process of setting up and deploying the pro
     </body>
   </html>
   ```
-1. Create file TCKT.xlsx
 
-2. Create a `wsgi.py` file in the project root with the following content:
+5. Create file TCKT.xlsx
+
+6. Create a `wsgi.py` file in the project root with the following content:
   ```
   from app import app
 
