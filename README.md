@@ -313,12 +313,57 @@ This guide will walk you through the process of setting up and deploying the pro
         #search-container button {
           flex-shrink: 0;
         }
+
+        .file-input-wrapper {
+          position: relative;
+          display: inline-block;
+          cursor: pointer;
+        }
+
+        .file-input-wrapper input[type="file"] {
+          position: absolute;
+          left: 0;
+          top: 0;
+          opacity: 0;
+          cursor: pointer;
+          width: 100%;
+          height: 100%;
+        }
+
+        .file-input-wrapper label {
+          display: inline-block;
+          padding: 10px 20px;
+          background-color: #f0f0f0;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 16px;
+          transition: all 0.3s ease;
+        }
+
+        .file-input-wrapper:hover label {
+          background-color: #e0e0e0;
+        }
+
+        .file-input-wrapper input[type="file"]:focus + label {
+          outline: 2px solid #007bff;
+        }
+
+        /* Optional: Style for showing selected file name */
+        .file-input-wrapper::after {
+          content: attr(data-text);
+          font-size: 14px;
+          color: #555;
+          margin-left: 10px;
+        }
       </style>
     </head>
     <body>
       <h1>KIỂM TRA HSDA - IT P8</h1>
       <form id="upload-form">
-        <input type="file" id="pdf-file" accept=".pdf" required="">
+        <div class="file-input-wrapper">
+          <input type="file" id="pdf-file" accept=".pdf" required>
+          <label for="pdf-file">Choose a file</label>
+        </div>
         <button type="submit">Tải lên và xử lý</button>
       </form>
       <div id="search-container" style="display: none">
@@ -345,6 +390,11 @@ This guide will walk you through the process of setting up and deploying the pro
         let filteredResults = [];
         const itemsPerPage = 10;
         let currentPage = 1;
+
+        document.getElementById('pdf-file').addEventListener('change', function(e) {
+          var fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
+          this.parentNode.setAttribute('data-text', fileName);
+        });
 
         document
           .getElementById("upload-form")
@@ -527,7 +577,9 @@ This guide will walk you through the process of setting up and deploying the pro
   bind = "0.0.0.0:5001"
   workers = 4
   threads = 2
-  timeout = 120
+  timeout = 600
+  max_requests = 1000
+  keepalive = 5
   ```
 
 8. Create a virtual environment:
