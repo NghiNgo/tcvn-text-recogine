@@ -34,7 +34,7 @@ This guide will walk you through the process of setting up and deploying the pro
   zipp==3.20.0
   ```
 
-2. Create file app.py
+2. Create a `app.py` file in the project root with the following content:
   ```
   import os
   from flask import Flask, request, jsonify, render_template
