@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KIỂM TRA HSDA - Version 1.1</title>
+    <title>Phrase Finder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔍</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -160,26 +161,26 @@
     </style>
   </head>
   <body>
-    <h1>KIỂM TRA HSDA - IT P8</h1>
+    <h1>Phrase Finder</h1>
     <form id="upload-form">
       <input type="file" id="pdf-file" accept=".pdf" required="">
-      <button type="submit">Tải lên và xử lý</button>
+      <button type="submit">Upload and Process</button>
     </form>
     <div id="search-container" style="display: none">
-      <input type="text" id="search-input" placeholder="Nhập từ khóa..." />
-      <button onclick="applyFilters()">Tìm kiếm</button>
+      <input type="text" id="search-input" placeholder="Search results..." />
+      <button onclick="applyFilters()">Search</button>
       <select id="standard-type-select" onchange="applyFilters()">
-        <option value="all">Tất cả</option>
+        <option value="all">All Types</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
-        <option value="Unknown">Không tìm thấy</option>
+        <option value="Unknown">Unknown</option>
       </select>
     </div>
     <div
       id="loading"
       style="display: none; text-align: center; margin-top: 20px"
     >
-      <p>Đang xử lý... Từ từ khoai nó mới nhừ...</p>
+      <p>Processing... Please wait.</p>
       <div class="spinner"></div>
     </div>
     <div id="results"></div>
@@ -239,7 +240,7 @@
 
         var resultsDiv = document.getElementById("results");
         if (pageResults.length > 0) {
-          var html = `<h2>Kết quả tìm được: (${filteredResults.length})</h2>`;
+          var html = `<h2>Results: (${filteredResults.length})</h2>`;
 
           // Group results by standard_type
           const groupedResults = groupByStandardType(pageResults);
@@ -249,8 +250,8 @@
             items.forEach((item) => {
               html += `
               <div class="result-item">
-                <strong>Tìm theo:</strong> ${item.phrase}<br>
-                <strong>Trang:</strong> ${item.page}, <strong>Dòng:</strong> ${
+                <strong>Phrase:</strong> ${item.phrase}<br>
+                <strong>Page:</strong> ${item.page}, <strong>Line:</strong> ${
                 item.line
               }<br>
                 <strong>Base Text:</strong> ${item.base_text}<br>
@@ -266,8 +267,8 @@
                 }
                 ${
                   item.matching_check_phrase
-                    ? `<strong>Mã số:</strong> ${item.matching_check_phrase}<br>`
-                    : `<strong>Mã số:</strong> <span style="color: brown;">Không tìm thấy</span><br>`
+                    ? `<strong>Mã số văn bản:</strong> ${item.matching_check_phrase}<br>`
+                    : `<strong>Mã số văn bản:</strong> <span style="color: brown;">Không tìm thấy</span><br>`
                 }
                 ${
                   item.matching_result_3
@@ -293,7 +294,7 @@
         } else if (filteredResults.error) {
           resultsDiv.innerHTML = "<p>Error: " + filteredResults.error + "</p>";
         } else {
-          resultsDiv.innerHTML = "<p>Không tìm thấy nội dung phù hợp</p>";
+          resultsDiv.innerHTML = "<p>No matching phrases found.</p>";
         }
       }
 
