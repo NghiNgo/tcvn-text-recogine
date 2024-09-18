@@ -1,4 +1,4 @@
-import os
+import io
 from flask import Flask, request, jsonify, render_template
 from PyPDF2 import PdfReader
 import re
@@ -6,16 +6,22 @@ import pandas as pd
 import numpy as np
 import json
 import concurrent.futures
-
+import multiprocessing
 
 app = Flask(__name__)
 
+def extract_page_text(page):
+    return page.extract_text()
+
 def extract_text_from_pdf(pdf_file):
-    reader = PdfReader(pdf_file)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() + "\n\n"
-    return text
+    pdf_bytes = pdf_file.read()
+    
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    
+    with multiprocessing.Pool() as pool:
+        texts = pool.map(extract_page_text, reader.pages)
+    
+    return "\n\n".join(texts)
 
 def process_pdf(pdf_file):
     text = extract_text_from_pdf(pdf_file)
@@ -111,8 +117,8 @@ def upload_file():
     else:
         return jsonify({"error": "Invalid file type"}), 400
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)

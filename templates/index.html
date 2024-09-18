@@ -10,6 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <style>
       body {
         font-family: "Open Sans", sans-serif;
@@ -162,6 +163,7 @@
         position: relative;
         display: inline-block;
         cursor: pointer;
+        margin-right: 10px;
       }
 
       .file-input-wrapper input[type="file"] {
@@ -205,14 +207,26 @@
     <h1>KIỂM TRA HSDA - IT P8</h1>
     <form id="upload-form">
       <div class="file-input-wrapper">
-        <input type="file" id="pdf-file" accept=".pdf" required>
-        <label for="pdf-file">Choose a file</label>
+        <input type="file" id="pdf-file" accept=".pdf" required />
+        <label for="pdf-file">Chọn file</label>
       </div>
       <button type="submit">Tải lên và xử lý</button>
     </form>
+    <button id="download-xlsx" style="display: none">Tải xuống XLSX</button>
+    <div id="statistics-container" style="display: none">
+      <h3>Thống kê:</h3>
+      <p>TCVN: <span id="tcvn-count">0</span></p>
+      <p>QCVN: <span id="qcvn-count">0</span></p>
+      <p>Không tìm thấy: <span id="unknown-count">0</span></p>
+    </div>
     <div id="search-container" style="display: none">
-      <input type="text" id="search-input" placeholder="Nhập từ khóa..." />
-      <button onclick="applyFilters()">Tìm kiếm</button>
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Nhập từ khóa..."
+        style="display: none"
+      />
+      <!-- <button onclick="applyFilters()">Tìm kiếm</button> -->
       <select id="standard-type-select" onchange="applyFilters()">
         <option value="all">Tất cả</option>
         <option value="TCVN">TCVN</option>
@@ -235,10 +249,14 @@
       const itemsPerPage = 10;
       let currentPage = 1;
 
-      document.getElementById('pdf-file').addEventListener('change', function(e) {
-        var fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
-        this.parentNode.setAttribute('data-text', fileName);
-      });
+      document
+        .getElementById("pdf-file")
+        .addEventListener("change", function (e) {
+          var fileName = e.target.files[0]
+            ? e.target.files[0].name
+            : "No file selected";
+          this.parentNode.setAttribute("data-text", fileName);
+        });
 
       document
         .getElementById("upload-form")
@@ -265,9 +283,18 @@
             .then((data) => {
               allResults = data;
               filteredResults = allResults;
+              const stats = calculateStatistics(allResults);
+              document.getElementById("tcvn-count").textContent = stats.TCVN;
+              document.getElementById("qcvn-count").textContent = stats.QCVN;
+              document.getElementById("unknown-count").textContent =
+                stats.Unknown;
               displayResults(1);
               document.getElementById("search-container").style.display =
                 "flex";
+              document.getElementById("statistics-container").style.display =
+                "block";
+              document.getElementById("download-xlsx").style.display =
+                "inline-block";
             })
             .catch((error) => {
               console.error("Error:", error);
@@ -303,17 +330,6 @@
                 <strong>Trang:</strong> ${item.page}, <strong>Dòng:</strong> ${
                 item.line
               }<br>
-                <strong>Base Text:</strong> ${item.base_text}<br>
-                ${
-                  item.after_text
-                    ? `<strong>After Text:</strong> ${item.after_text}<br>`
-                    : ""
-                }
-                ${
-                  item.updated_phrase
-                    ? `<strong>Updated Phrase:</strong> ${item.updated_phrase}<br>`
-                    : ""
-                }
                 ${
                   item.matching_check_phrase
                     ? `<strong>Mã số:</strong> ${item.matching_check_phrase}<br>`
@@ -347,6 +363,27 @@
         }
       }
 
+      function downloadXLSX() {
+        const exportData = filteredResults.map((item) => ({
+          "Tìm theo": item.phrase,
+          "Trang": item.page,
+          "Dòng": item.line,
+          "Mã số": item.matching_check_phrase || "Không tìm thấy",
+          "Tình trạng": item.matching_result_3 || "Không tìm thấy",
+          "Văn bản thay thế": item.matching_result_2 || "",
+          "Ghi chú": item.matching_result_1 || "",
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
+        XLSX.writeFile(workbook, "results.xlsx");
+      }
+
+      document
+        .getElementById("download-xlsx")
+        .addEventListener("click", downloadXLSX);
+
       function groupByStandardType(results) {
         return results.reduce((acc, item) => {
           (acc[item.standard_type] = acc[item.standard_type] || []).push(item);
@@ -366,6 +403,28 @@
 
         paginationHtml += "</div>";
         return paginationHtml;
+      }
+
+      function calculateStatistics(results) {
+        const stats = {
+          TCVN: 0,
+          QCVN: 0,
+          Unknown: 0,
+        };
+
+        results.forEach((item) => {
+          if (item.matching_check_phrase) {
+            if (item.matching_check_phrase.startsWith("TCVN")) {
+              stats.TCVN++;
+            } else if (item.matching_check_phrase.startsWith("QCVN")) {
+              stats.QCVN++;
+            }
+          } else {
+            stats.Unknown++;
+          }
+        });
+
+        return stats;
       }
 
       function applyFilters() {
@@ -394,7 +453,10 @@
               item.matching_result_1.toLowerCase().includes(searchTerm));
 
           const matchesType =
-            selectedType === "all" || item.standard_type === selectedType;
+            selectedType === "all" ||
+            (selectedType === "Unknown" && !item.matching_check_phrase) ||
+            (item.matching_check_phrase &&
+              item.matching_check_phrase.startsWith(selectedType));
 
           return matchesSearch && matchesType;
         });
