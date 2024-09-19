@@ -36,7 +36,7 @@ This guide will walk you through the process of setting up and deploying the pro
 
 2. Create a `app.py` file in the project root with the following content:
   ```
-  import os
+  import io
   from flask import Flask, request, jsonify, render_template
   from PyPDF2 import PdfReader
   import re
@@ -44,16 +44,22 @@ This guide will walk you through the process of setting up and deploying the pro
   import numpy as np
   import json
   import concurrent.futures
-
+  import multiprocessing
 
   app = Flask(__name__)
 
+  def extract_page_text(page):
+      return page.extract_text()
+
   def extract_text_from_pdf(pdf_file):
-      reader = PdfReader(pdf_file)
-      text = ""
-      for page in reader.pages:
-          text += page.extract_text() + "\n\n"
-      return text
+      pdf_bytes = pdf_file.read()
+      
+      reader = PdfReader(io.BytesIO(pdf_bytes))
+      
+      with multiprocessing.Pool() as pool:
+          texts = pool.map(extract_page_text, reader.pages)
+      
+      return "\n\n".join(texts)
 
   def process_pdf(pdf_file):
       text = extract_text_from_pdf(pdf_file)
@@ -166,6 +172,7 @@ This guide will walk you through the process of setting up and deploying the pro
         href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
         rel="stylesheet"
       />
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
       <style>
         body {
           font-family: "Open Sans", sans-serif;
@@ -318,6 +325,7 @@ This guide will walk you through the process of setting up and deploying the pro
           position: relative;
           display: inline-block;
           cursor: pointer;
+          margin-right: 10px;
         }
 
         .file-input-wrapper input[type="file"] {
@@ -355,20 +363,77 @@ This guide will walk you through the process of setting up and deploying the pro
           color: #555;
           margin-left: 10px;
         }
+
+        #changelog {
+          background-color: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          margin-top: 30px;
+        }
+
+        #changelog h2 {
+          color: #2c3e50;
+          border-bottom: 2px solid #3498db;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+
+        #changelog-list {
+          list-style-type: none;
+          padding-left: 0;
+        }
+
+        #changelog-list li {
+          margin-bottom: 15px;
+        }
+
+        #changelog-list ul {
+          margin-top: 5px;
+        }
+
+        .result-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+          .result-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        .result-item {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
       </style>
     </head>
     <body>
       <h1>KIỂM TRA HSDA - IT P8</h1>
       <form id="upload-form">
         <div class="file-input-wrapper">
-          <input type="file" id="pdf-file" accept=".pdf" required>
-          <label for="pdf-file">Choose a file</label>
+          <input type="file" id="pdf-file" accept=".pdf" required />
+          <label for="pdf-file">Chọn file</label>
         </div>
         <button type="submit">Tải lên và xử lý</button>
+        <button id="download-xlsx" style="display: none; background-color: green; color: white;">Tải xuống XLSX</button>
       </form>
+      <div id="statistics-container" style="display: none">
+        <h3>Thống kê:</h3>
+        <p>TCVN: <span id="tcvn-count">0</span></p>
+        <p>QCVN: <span id="qcvn-count">0</span></p>
+        <p>Không tìm thấy: <span id="unknown-count">0</span></p>
+      </div>
       <div id="search-container" style="display: none">
-        <input type="text" id="search-input" placeholder="Nhập từ khóa..." />
-        <button onclick="applyFilters()">Tìm kiếm</button>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Nhập từ khóa..."
+          style="display: none"
+        />
+        <!-- <button onclick="applyFilters()">Tìm kiếm</button> -->
         <select id="standard-type-select" onchange="applyFilters()">
           <option value="all">Tất cả</option>
           <option value="TCVN">TCVN</option>
@@ -384,17 +449,24 @@ This guide will walk you through the process of setting up and deploying the pro
         <div class="spinner"></div>
       </div>
       <div id="results"></div>
-
+      <div id="changelog">
+        <h2>Nhật ký thay đổi</h2>
+        <ul id="changelog-list"></ul>
+      </div>
       <script>
         let allResults = [];
         let filteredResults = [];
         const itemsPerPage = 10;
         let currentPage = 1;
 
-        document.getElementById('pdf-file').addEventListener('change', function(e) {
-          var fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
-          this.parentNode.setAttribute('data-text', fileName);
-        });
+        document
+          .getElementById("pdf-file")
+          .addEventListener("change", function (e) {
+            var fileName = e.target.files[0]
+              ? e.target.files[0].name
+              : "No file selected";
+            this.parentNode.setAttribute("data-text", fileName);
+          });
 
         document
           .getElementById("upload-form")
@@ -421,9 +493,18 @@ This guide will walk you through the process of setting up and deploying the pro
               .then((data) => {
                 allResults = data;
                 filteredResults = allResults;
+                const stats = calculateStatistics(allResults);
+                document.getElementById("tcvn-count").textContent = stats.TCVN;
+                document.getElementById("qcvn-count").textContent = stats.QCVN;
+                document.getElementById("unknown-count").textContent =
+                  stats.Unknown;
                 displayResults(1);
                 document.getElementById("search-container").style.display =
                   "flex";
+                document.getElementById("statistics-container").style.display =
+                  "block";
+                document.getElementById("download-xlsx").style.display =
+                  "inline-block";
               })
               .catch((error) => {
                 console.error("Error:", error);
@@ -452,6 +533,7 @@ This guide will walk you through the process of setting up and deploying the pro
 
             for (const [standardType, items] of Object.entries(groupedResults)) {
               html += `<h3>${standardType}</h3>`;
+              html += '<div class="result-grid">';
               items.forEach((item) => {
                 html += `
                 <div class="result-item">
@@ -459,17 +541,6 @@ This guide will walk you through the process of setting up and deploying the pro
                   <strong>Trang:</strong> ${item.page}, <strong>Dòng:</strong> ${
                   item.line
                 }<br>
-                  <strong>Base Text:</strong> ${item.base_text}<br>
-                  ${
-                    item.after_text
-                      ? `<strong>After Text:</strong> ${item.after_text}<br>`
-                      : ""
-                  }
-                  ${
-                    item.updated_phrase
-                      ? `<strong>Updated Phrase:</strong> ${item.updated_phrase}<br>`
-                      : ""
-                  }
                   ${
                     item.matching_check_phrase
                       ? `<strong>Mã số:</strong> ${item.matching_check_phrase}<br>`
@@ -485,13 +556,9 @@ This guide will walk you through the process of setting up and deploying the pro
                       ? `<strong>Văn bản thay thế:</strong> <span style="color: red;">${item.matching_result_2}</span><br>`
                       : ""
                   }
-                  ${
-                    item.matching_result_1
-                      ? `<strong>Ghi chú:</strong> ${item.matching_result_1}<br>`
-                      : ""
-                  }
                 </div>`;
               });
+              html += "</div>";
             }
 
             html += generatePagination();
@@ -503,12 +570,71 @@ This guide will walk you through the process of setting up and deploying the pro
           }
         }
 
+        function downloadXLSX() {
+          const exportData = filteredResults.map((item) => ({
+            "Tìm theo": item.phrase,
+            Trang: item.page,
+            Dòng: item.line,
+            "Mã số": item.matching_check_phrase || "Không tìm thấy",
+            "Tình trạng": item.matching_result_3 || "Không tìm thấy",
+            "Văn bản thay thế": item.matching_result_2 || "",
+          }));
+
+          const worksheet = XLSX.utils.json_to_sheet(exportData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
+          XLSX.writeFile(workbook, "results.xlsx");
+        }
+
+        document
+          .getElementById("download-xlsx")
+          .addEventListener("click", downloadXLSX);
+
         function groupByStandardType(results) {
           return results.reduce((acc, item) => {
             (acc[item.standard_type] = acc[item.standard_type] || []).push(item);
             return acc;
           }, {});
         }
+
+        const changeLog = [
+          {
+            version: "1.0",
+            date: "2024-08-14",
+            changes: [
+              "Phát hành ban đầu",
+              "Chức năng xử lý PDF cơ bản",
+              "Khả năng tìm kiếm và lọc",
+            ],
+          },
+          {
+            version: "1.1",
+            date: "2024-09-19",
+            changes: [
+              "Cải thiện hiệu suất tìm kiếm",
+              "Thêm chức năng tải xuống file XLSX",
+            ],
+          },
+        ];
+
+        function displayChangeLog() {
+          const changelogList = document.getElementById("changelog-list");
+          changelogList.innerHTML = "";
+
+          changeLog.forEach((version) => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+        <strong>Version ${version.version}</strong> (${version.date})
+        <ul>
+          ${version.changes.map((change) => `<li>${change}</li>`).join("")}
+        </ul>
+      `;
+            changelogList.appendChild(li);
+          });
+        }
+
+        // Call this function when the page loads
+        displayChangeLog();
 
         function generatePagination() {
           const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
@@ -522,6 +648,28 @@ This guide will walk you through the process of setting up and deploying the pro
 
           paginationHtml += "</div>";
           return paginationHtml;
+        }
+
+        function calculateStatistics(results) {
+          const stats = {
+            TCVN: 0,
+            QCVN: 0,
+            Unknown: 0,
+          };
+
+          results.forEach((item) => {
+            if (item.matching_check_phrase) {
+              if (item.matching_check_phrase.startsWith("TCVN")) {
+                stats.TCVN++;
+              } else if (item.matching_check_phrase.startsWith("QCVN")) {
+                stats.QCVN++;
+              }
+            } else {
+              stats.Unknown++;
+            }
+          });
+
+          return stats;
         }
 
         function applyFilters() {
@@ -550,7 +698,10 @@ This guide will walk you through the process of setting up and deploying the pro
                 item.matching_result_1.toLowerCase().includes(searchTerm));
 
             const matchesType =
-              selectedType === "all" || item.standard_type === selectedType;
+              selectedType === "all" ||
+              (selectedType === "Unknown" && !item.matching_check_phrase) ||
+              (item.matching_check_phrase &&
+                item.matching_check_phrase.startsWith(selectedType));
 
             return matchesSearch && matchesType;
           });
