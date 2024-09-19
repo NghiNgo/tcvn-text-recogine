@@ -408,6 +408,155 @@ This guide will walk you through the process of setting up and deploying the pro
           break-inside: avoid;
           page-break-inside: avoid;
         }
+
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 1;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          overflow: auto;
+          background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+          background-color: #fefefe;
+          margin: 15% auto;
+          padding: 20px;
+          border: 1px solid #888;
+          width: 80%;
+          max-width: 600px;
+          border-radius: 8px;
+        }
+
+        .close {
+          color: #aaa;
+          float: right;
+          font-size: 28px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+          color: #000;
+          text-decoration: none;
+          cursor: pointer;
+        }
+
+        .button-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 15px;
+        }
+
+        .left-buttons {
+          display: flex;
+          gap: 10px;
+        }
+
+        #open-changelog {
+          display: block;
+          margin: 20px auto;
+          padding: 10px 20px;
+          background-color: #7f8c8d;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+          margin-left: auto;
+        }
+
+        #open-changelog:hover {
+          background-color: #95a5a6;
+        }
+
+        .button {
+          display: inline-block;
+          padding: 12px 20px;
+          background-color: #2ecc71;
+          color: white;
+          text-decoration: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+          font-weight: 700;
+          font-size: 16px; /* Add this line */
+        }
+
+        button {
+          background-color: #3498db;
+          color: white;
+          padding: 12px 20px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+          font-weight: 700;
+          font-size: 16px; /* Add this line */
+        }
+
+        .button:hover {
+          background-color: #27ae60;
+        }
+
+        #statistics-container {
+          background-color: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          margin-bottom: 30px;
+        }
+
+        #statistics-container h2 {
+          color: #2c3e50;
+          border-bottom: 2px solid #3498db;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+          font-weight: 700;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 20px;
+        }
+
+        .stat-item {
+          background-color: #f9f9f9;
+          padding: 15px;
+          border-radius: 8px;
+          text-align: center;
+          transition: transform 0.2s;
+        }
+
+        .stat-item:hover {
+          transform: translateY(-5px);
+        }
+
+        .stat-item h3 {
+          color: #2c3e50;
+          margin-bottom: 10px;
+          font-weight: 600;
+        }
+
+        .stat-count {
+          font-size: 24px;
+          font-weight: 700;
+          color: #3498db;
+        }
+
+        .modal-title {
+          color: #2c3e50;
+          border-bottom: 2px solid #3498db;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+          font-weight: 700;
+        }
       </style>
     </head>
     <body>
@@ -417,14 +566,36 @@ This guide will walk you through the process of setting up and deploying the pro
           <input type="file" id="pdf-file" accept=".pdf" required />
           <label for="pdf-file">Chọn file</label>
         </div>
-        <button type="submit">Tải lên và xử lý</button>
-        <button id="download-xlsx" style="display: none; background-color: green; color: white;">Tải xuống XLSX</button>
+        <div class="button-row">
+          <div class="left-buttons">
+            <button type="submit">Tải lên và xử lý</button>
+            <a id="download-xlsx" href="#" class="button" style="display: none">
+              Tải xuống XLSX
+            </a>
+          </div>
+          <div>
+            <a id="open-changelog" href="#" class="button"
+              >Xem nhật ký thay đổi</a
+            >
+          </div>
+        </div>
       </form>
       <div id="statistics-container" style="display: none">
-        <h3>Thống kê:</h3>
-        <p>TCVN: <span id="tcvn-count">0</span></p>
-        <p>QCVN: <span id="qcvn-count">0</span></p>
-        <p>Không tìm thấy: <span id="unknown-count">0</span></p>
+        <h2>Thống kê</h2>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <h3>TCVN</h3>
+            <span id="tcvn-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>QCVN</h3>
+            <span id="qcvn-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>Không tìm thấy</h3>
+            <span id="unknown-count" class="stat-count">0</span>
+          </div>
+        </div>
       </div>
       <div id="search-container" style="display: none">
         <input
@@ -449,9 +620,12 @@ This guide will walk you through the process of setting up and deploying the pro
         <div class="spinner"></div>
       </div>
       <div id="results"></div>
-      <div id="changelog">
-        <h2>Nhật ký thay đổi</h2>
-        <ul id="changelog-list"></ul>
+      <div id="changelog-modal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2 class="modal-title">Nhật ký thay đổi</h2>
+          <ul id="changelog-list"></ul>
+        </div>
       </div>
       <script>
         let allResults = [];
@@ -588,7 +762,10 @@ This guide will walk you through the process of setting up and deploying the pro
 
         document
           .getElementById("download-xlsx")
-          .addEventListener("click", downloadXLSX);
+          .addEventListener("click", function (e) {
+            e.preventDefault();
+            downloadXLSX();
+          });
 
         function groupByStandardType(results) {
           return results.reduce((acc, item) => {
@@ -624,17 +801,34 @@ This guide will walk you through the process of setting up and deploying the pro
           changeLog.forEach((version) => {
             const li = document.createElement("li");
             li.innerHTML = `
-        <strong>Version ${version.version}</strong> (${version.date})
-        <ul>
-          ${version.changes.map((change) => `<li>${change}</li>`).join("")}
-        </ul>
-      `;
+              <strong>Version ${version.version}</strong> (${version.date})
+              <ul>
+                ${version.changes.map((change) => `<li>${change}</li>`).join("")}
+              </ul>
+            `;
             changelogList.appendChild(li);
           });
         }
 
-        // Call this function when the page loads
-        displayChangeLog();
+        const modal = document.getElementById("changelog-modal");
+        document
+          .getElementById("open-changelog")
+          .addEventListener("click", function (e) {
+            e.preventDefault();
+            modal.style.display = "block";
+            displayChangeLog();
+          });
+        const span = document.getElementsByClassName("close")[0];
+
+        span.onclick = function () {
+          modal.style.display = "none";
+        };
+
+        window.onclick = function (event) {
+          if (event.target == modal) {
+            modal.style.display = "none";
+          }
+        };
 
         function generatePagination() {
           const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
