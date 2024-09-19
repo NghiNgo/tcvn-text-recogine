@@ -947,7 +947,7 @@ This guide will walk you through the process of setting up and deploying the pro
   pip install -r requirements.txt
   ```
 
-11. Run the application using Gunicorn:
+11. Run the application using Gunicorn (UNIX/LINUX):
   ```
   gunicorn --config gunicorn_config.py wsgi:app
   ```
