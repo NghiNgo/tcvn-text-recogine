@@ -66,7 +66,19 @@ This guide will walk you through the process of setting up and deploying the pro
       results = []
       patterns = [
           r"TCVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-          r"QCVN(?:\s+\w+)?(?:[-:]\d+)?(?:\s*:\s*\d+)?"
+          r"QCVN(?:\s+[A-Za-z0-9Đ-]+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*[A-Z]+)?)?",
+          r"TCXD\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"TCXDVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"TCN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"ACI\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"ASTM\s*[A-Z]?\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"BHT\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"IEC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"IEEE\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"TCCS\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+          r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?"
       ]
 
       # Load the Excel file
@@ -90,21 +102,28 @@ This guide will walk you through the process of setting up and deploying the pro
       def process_page(page_data):
           page_num, page_text = page_data
           page_results = []
+          standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU"]
           for pattern in patterns:
               matches = re.finditer(pattern, page_text, re.IGNORECASE)
               for match in matches:
                   phrase = re.sub(r'\s+', '', match.group().strip())
                   
                   line_num = page_text[:match.start()].count('\n') + 1
-                  base_text = "TCVN" if phrase.startswith("TCVN") else "QCVN" if phrase.startswith("QCVN") else ""
+                  base_text = next((standard for standard in standards if phrase.startswith(standard)), "")
                   
                   after_text = ""
                   if base_text:
                       index = page_text.find(base_text, match.start())
                       if index != -1:
-                          after_text = re.sub(r'\s+', '', page_text[index+4:index+24].strip())
-                  
-                  updated_phrase = f"{base_text} {after_text}" if base_text and after_text else ""
+                          after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
+                          for standard in standards:
+                              if standard in after_text:
+                                  after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                  break
+                          else:
+                              after_text = re.sub(r'\s+', ' ', after_text[:24])
+
+                  updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                   
                   updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
                   matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
@@ -114,7 +133,7 @@ This guide will walk you through the process of setting up and deploying the pro
                   ] if matching_check_phrase else [None] * 3
 
                   page_results.append({
-                      "phrase": phrase,
+                      "phrase": updated_phrase,
                       "page": page_num,
                       "line": line_num,
                       "base_text": base_text,
@@ -124,7 +143,7 @@ This guide will walk you through the process of setting up and deploying the pro
                       "matching_result_3": matching_results[0],
                       "matching_result_2": matching_results[1],
                       "matching_result_1": matching_results[2],
-                      "standard_type": "TCVN" if phrase.startswith("TCVN") else "QCVN" if phrase.startswith("QCVN") else "Unknown",
+                      "standard_type": base_text if base_text else "Unknown",
                       "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
                       "full_reference": f"{base_text} {after_text}".strip()
                   })
@@ -154,6 +173,12 @@ This guide will walk you through the process of setting up and deploying the pro
           return json.dumps(results, ensure_ascii=False, default=str)
       else:
           return jsonify({"error": "Invalid file type"}), 400
+
+  # if __name__ == '__main__':
+  #     app.run(debug=True)
+
+  # if __name__ == '__main__':
+  #     app.run(host='0.0.0.0', port=5000)
   ```
 
 3. Create new folder `templates`
@@ -172,7 +197,11 @@ This guide will walk you through the process of setting up and deploying the pro
         href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
         rel="stylesheet"
       />
-      <link rel="icon" href="{{ url_for('static', filename='evn.png') }}" type="image/png">
+      <link
+        rel="icon"
+        href="{{ url_for('static', filename='evn.png') }}"
+        type="image/png"
+      />
       <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
       <style>
         body {
@@ -532,23 +561,51 @@ This guide will walk you through the process of setting up and deploying the pro
           padding: 15px;
           border-radius: 8px;
           text-align: center;
-          transition: transform 0.2s;
+          transition: transform 0.2s, box-shadow 0.2s;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .stat-item:hover {
           transform: translateY(-5px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
 
         .stat-item h3 {
           color: #2c3e50;
           margin-bottom: 10px;
           font-weight: 600;
+          font-size: 1rem;
         }
 
         .stat-count {
-          font-size: 24px;
+          font-size: 1.5rem;
           font-weight: 700;
           color: #3498db;
+        }
+
+        .stat-item.total {
+          background-color: #3498db;
+          color: white;
+        }
+
+        .stat-item.total h3 {
+          color: white;
+        }
+
+        .stat-item.total .stat-count {
+          color: white;
+        }
+
+        @media (max-width: 768px) {
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
         }
 
         .modal-title {
@@ -610,6 +667,54 @@ This guide will walk you through the process of setting up and deploying the pro
             <span id="qcvn-count" class="stat-count">0</span>
           </div>
           <div class="stat-item">
+            <h3>TCXD</h3>
+            <span id="tcxd-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>TCXDVN</h3>
+            <span id="tcxdvn-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>TCN</h3>
+            <span id="tcn-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>ACI</h3>
+            <span id="aci-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>ASTM</h3>
+            <span id="astm-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>BHT</h3>
+            <span id="bht-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>IEC</h3>
+            <span id="iec-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>IEEE</h3>
+            <span id="ieee-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>TCCS</h3>
+            <span id="tccs-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>NFPA</h3>
+            <span id="nfpa-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>TC</h3>
+            <span id="tc-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
+            <h3>ITU</h3>
+            <span id="itu-count" class="stat-count">0</span>
+          </div>
+          <div class="stat-item">
             <h3>Không tìm thấy</h3>
             <span id="unknown-count" class="stat-count">0</span>
           </div>
@@ -627,6 +732,18 @@ This guide will walk you through the process of setting up and deploying the pro
           <option value="all">Tất cả</option>
           <option value="TCVN">TCVN</option>
           <option value="QCVN">QCVN</option>
+          <option value="TCXD">TCXD</option>
+          <option value="TCXDVN">TCXDVN</option>
+          <option value="TCN">TCN</option>
+          <option value="ACI">ACI</option>
+          <option value="ASTM">ASTM</option>
+          <option value="BHT">BHT</option>
+          <option value="IEC">IEC</option>
+          <option value="IEEE">IEEE</option>
+          <option value="TCCS">TCCS</option>
+          <option value="NFPA">NFPA</option>
+          <option value="TC">TC</option>
+          <option value="ITU">ITU</option>
           <option value="Unknown">Không tìm thấy</option>
         </select>
       </div>
@@ -688,6 +805,19 @@ This guide will walk you through the process of setting up and deploying the pro
                 const stats = calculateStatistics(allResults);
                 document.getElementById("tcvn-count").textContent = stats.TCVN;
                 document.getElementById("qcvn-count").textContent = stats.QCVN;
+                document.getElementById("tcxd-count").textContent = stats.TCXD;
+                document.getElementById("tcxdvn-count").textContent =
+                  stats.TCXDVN;
+                document.getElementById("tcn-count").textContent = stats.TCN;
+                document.getElementById("aci-count").textContent = stats.ACI;
+                document.getElementById("astm-count").textContent = stats.ASTM;
+                document.getElementById("bht-count").textContent = stats.BHT;
+                document.getElementById("iec-count").textContent = stats.IEC;
+                document.getElementById("ieee-count").textContent = stats.IEEE;
+                document.getElementById("tccs-count").textContent = stats.TCCS;
+                document.getElementById("nfpa-count").textContent = stats.NFPA;
+                document.getElementById("tc-count").textContent = stats.TC;
+                document.getElementById("itu-count").textContent = stats.ITU;
                 document.getElementById("unknown-count").textContent =
                   stats.Unknown;
                 displayResults(1);
@@ -794,12 +924,10 @@ This guide will walk you through the process of setting up and deploying the pro
 
         const changeLog = [
           {
-            version: "1.0",
-            date: "2024-08-14",
+            version: "1.2",
+            date: "2024-09-24",
             changes: [
-              "Phát hành ban đầu",
-              "Chức năng xử lý PDF cơ bản",
-              "Khả năng tìm kiếm và lọc",
+              "Thêm các quy chuẩn mới: TCXD, TCXDVN, TCN, ACI, ASTM, BHT, IEC, IEEE, TCCS, NFPA, TC, ITU",
             ],
           },
           {
@@ -810,6 +938,15 @@ This guide will walk you through the process of setting up and deploying the pro
               "Thêm chức năng tải xuống file XLSX",
             ],
           },
+          {
+            version: "1.0",
+            date: "2024-08-14",
+            changes: [
+              "Phát hành ban đầu",
+              "Chức năng xử lý PDF cơ bản",
+              "Khả năng tìm kiếm và lọc",
+            ],
+          }
         ];
 
         function displayChangeLog() {
@@ -862,28 +999,6 @@ This guide will walk you through the process of setting up and deploying the pro
           return paginationHtml;
         }
 
-        function calculateStatistics(results) {
-          const stats = {
-            TCVN: 0,
-            QCVN: 0,
-            Unknown: 0,
-          };
-
-          results.forEach((item) => {
-            if (item.matching_check_phrase) {
-              if (item.matching_check_phrase.startsWith("TCVN")) {
-                stats.TCVN++;
-              } else if (item.matching_check_phrase.startsWith("QCVN")) {
-                stats.QCVN++;
-              }
-            } else {
-              stats.Unknown++;
-            }
-          });
-
-          return stats;
-        }
-
         function applyFilters() {
           const searchTerm = document
             .getElementById("search-input")
@@ -913,12 +1028,58 @@ This guide will walk you through the process of setting up and deploying the pro
               selectedType === "all" ||
               (selectedType === "Unknown" && !item.matching_check_phrase) ||
               (item.matching_check_phrase &&
-                item.matching_check_phrase.startsWith(selectedType));
+                isLikeMatch(item.matching_check_phrase, selectedType));
 
             return matchesSearch && matchesType;
           });
 
           displayResults(1);
+        }
+
+        function isLikeMatch(value, pattern) {
+          if (pattern === "all") return true;
+          const regex = new RegExp(`^${pattern}`, "i");
+          return regex.test(value);
+        }
+
+        function calculateStatistics(results) {
+          const stats = {
+            TCVN: 0,
+            QCVN: 0,
+            TCXD: 0,
+            TCXDVN: 0,
+            TCN: 0,
+            ACI: 0,
+            ASTM: 0,
+            BHT: 0,
+            IEC: 0,
+            IEEE: 0,
+            TCCS: 0,
+            NFPA: 0,
+            TC: 0,
+            ITU: 0,
+            Unknown: 0,
+          };
+
+          results.forEach((item) => {
+            if (item.matching_check_phrase) {
+              let matched = false;
+              for (const prefix in stats) {
+                if (isLikeMatch(item.matching_check_phrase, prefix)) {
+                  stats[prefix]++;
+                  matched = true;
+                  break;
+                }
+              }
+              if (!matched) {
+                stats.Unknown++;
+              }
+            } else {
+              stats.Unknown++;
+            }
+          });
+
+          return stats;
         }
       </script>
     </body>
