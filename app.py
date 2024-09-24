@@ -7,6 +7,7 @@ import numpy as np
 import json
 import concurrent.futures
 import multiprocessing
+import unittest
 
 app = Flask(__name__)
 
@@ -138,6 +139,18 @@ def upload_file():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+def run_tests():
+    test_loader = unittest.TestLoader()
+    test_suite = test_loader.discover('.')
+    unittest.TextTestRunner().run(test_suite)
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == 'test':
+        run_tests()
+    else:
+        app.run(debug=True)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)
