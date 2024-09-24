@@ -10,7 +10,11 @@
       href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
       rel="stylesheet"
     />
-    <link rel="icon" href="{{ url_for('static', filename='evn.png') }}" type="image/png">
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='evn.png') }}"
+      type="image/png"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <style>
       body {
@@ -370,23 +374,51 @@
         padding: 15px;
         border-radius: 8px;
         text-align: center;
-        transition: transform 0.2s;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .stat-item:hover {
         transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
       }
 
       .stat-item h3 {
         color: #2c3e50;
         margin-bottom: 10px;
         font-weight: 600;
+        font-size: 1rem;
       }
 
       .stat-count {
-        font-size: 24px;
+        font-size: 1.5rem;
         font-weight: 700;
         color: #3498db;
+      }
+
+      .stat-item.total {
+        background-color: #3498db;
+        color: white;
+      }
+
+      .stat-item.total h3 {
+        color: white;
+      }
+
+      .stat-item.total .stat-count {
+        color: white;
+      }
+
+      @media (max-width: 768px) {
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
       .modal-title {
@@ -448,6 +480,54 @@
           <span id="qcvn-count" class="stat-count">0</span>
         </div>
         <div class="stat-item">
+          <h3>TCXD</h3>
+          <span id="tcxd-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>TCXDVN</h3>
+          <span id="tcxdvn-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>TCN</h3>
+          <span id="tcn-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>ACI</h3>
+          <span id="aci-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>ASTM</h3>
+          <span id="astm-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>BHT</h3>
+          <span id="bht-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>IEC</h3>
+          <span id="iec-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>IEEE</h3>
+          <span id="ieee-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>TCCS</h3>
+          <span id="tccs-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>NFPA</h3>
+          <span id="nfpa-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>TC</h3>
+          <span id="tc-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <h3>ITU</h3>
+          <span id="itu-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item">
           <h3>Không tìm thấy</h3>
           <span id="unknown-count" class="stat-count">0</span>
         </div>
@@ -465,6 +545,18 @@
         <option value="all">Tất cả</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
+        <option value="TCXD">TCXD</option>
+        <option value="TCXDVN">TCXDVN</option>
+        <option value="TCN">TCN</option>
+        <option value="ACI">ACI</option>
+        <option value="ASTM">ASTM</option>
+        <option value="BHT">BHT</option>
+        <option value="IEC">IEC</option>
+        <option value="IEEE">IEEE</option>
+        <option value="TCCS">TCCS</option>
+        <option value="NFPA">NFPA</option>
+        <option value="TC">TC</option>
+        <option value="ITU">ITU</option>
         <option value="Unknown">Không tìm thấy</option>
       </select>
     </div>
@@ -526,6 +618,19 @@
               const stats = calculateStatistics(allResults);
               document.getElementById("tcvn-count").textContent = stats.TCVN;
               document.getElementById("qcvn-count").textContent = stats.QCVN;
+              document.getElementById("tcxd-count").textContent = stats.TCXD;
+              document.getElementById("tcxdvn-count").textContent =
+                stats.TCXDVN;
+              document.getElementById("tcn-count").textContent = stats.TCN;
+              document.getElementById("aci-count").textContent = stats.ACI;
+              document.getElementById("astm-count").textContent = stats.ASTM;
+              document.getElementById("bht-count").textContent = stats.BHT;
+              document.getElementById("iec-count").textContent = stats.IEC;
+              document.getElementById("ieee-count").textContent = stats.IEEE;
+              document.getElementById("tccs-count").textContent = stats.TCCS;
+              document.getElementById("nfpa-count").textContent = stats.NFPA;
+              document.getElementById("tc-count").textContent = stats.TC;
+              document.getElementById("itu-count").textContent = stats.ITU;
               document.getElementById("unknown-count").textContent =
                 stats.Unknown;
               displayResults(1);
@@ -700,28 +805,6 @@
         return paginationHtml;
       }
 
-      function calculateStatistics(results) {
-        const stats = {
-          TCVN: 0,
-          QCVN: 0,
-          Unknown: 0,
-        };
-
-        results.forEach((item) => {
-          if (item.matching_check_phrase) {
-            if (item.matching_check_phrase.startsWith("TCVN")) {
-              stats.TCVN++;
-            } else if (item.matching_check_phrase.startsWith("QCVN")) {
-              stats.QCVN++;
-            }
-          } else {
-            stats.Unknown++;
-          }
-        });
-
-        return stats;
-      }
-
       function applyFilters() {
         const searchTerm = document
           .getElementById("search-input")
@@ -751,12 +834,58 @@
             selectedType === "all" ||
             (selectedType === "Unknown" && !item.matching_check_phrase) ||
             (item.matching_check_phrase &&
-              item.matching_check_phrase.startsWith(selectedType));
+              isLikeMatch(item.matching_check_phrase, selectedType));
 
           return matchesSearch && matchesType;
         });
 
         displayResults(1);
+      }
+
+      function isLikeMatch(value, pattern) {
+        if (pattern === "all") return true;
+        const regex = new RegExp(`^${pattern}`, "i");
+        return regex.test(value);
+      }
+
+      function calculateStatistics(results) {
+        const stats = {
+          TCVN: 0,
+          QCVN: 0,
+          TCXD: 0,
+          TCXDVN: 0,
+          TCN: 0,
+          ACI: 0,
+          ASTM: 0,
+          BHT: 0,
+          IEC: 0,
+          IEEE: 0,
+          TCCS: 0,
+          NFPA: 0,
+          TC: 0,
+          ITU: 0,
+          Unknown: 0,
+        };
+
+        results.forEach((item) => {
+          if (item.matching_check_phrase) {
+            let matched = false;
+            for (const prefix in stats) {
+              if (isLikeMatch(item.matching_check_phrase, prefix)) {
+                stats[prefix]++;
+                matched = true;
+                break;
+              }
+            }
+            if (!matched) {
+              stats.Unknown++;
+            }
+          } else {
+            stats.Unknown++;
+          }
+        });
+
+        return stats;
       }
     </script>
   </body>

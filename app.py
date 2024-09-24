@@ -28,7 +28,19 @@ def process_pdf(pdf_file):
     results = []
     patterns = [
         r"TCVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"QCVN(?:\s+\w+)?(?:[-:]\d+)?(?:\s*:\s*\d+)?"
+        r"QCVN(?:\s+[A-Za-z0-9Đ-]+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*[A-Z]+)?)?",
+        r"TCXD\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"TCXDVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"TCN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"ACI\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"ASTM\s*[A-Z]?\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"BHT\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"IEC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"IEEE\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"TCCS\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?"
     ]
 
     # Load the Excel file
@@ -52,21 +64,28 @@ def process_pdf(pdf_file):
     def process_page(page_data):
         page_num, page_text = page_data
         page_results = []
+        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU"]
         for pattern in patterns:
             matches = re.finditer(pattern, page_text, re.IGNORECASE)
             for match in matches:
                 phrase = re.sub(r'\s+', '', match.group().strip())
                 
                 line_num = page_text[:match.start()].count('\n') + 1
-                base_text = "TCVN" if phrase.startswith("TCVN") else "QCVN" if phrase.startswith("QCVN") else ""
+                base_text = next((standard for standard in standards if phrase.startswith(standard)), "")
                 
                 after_text = ""
                 if base_text:
                     index = page_text.find(base_text, match.start())
                     if index != -1:
-                        after_text = re.sub(r'\s+', '', page_text[index+4:index+24].strip())
-                
-                updated_phrase = f"{base_text} {after_text}" if base_text and after_text else ""
+                        after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
+                        for standard in standards:
+                            if standard in after_text:
+                                after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                break
+                        else:
+                            after_text = re.sub(r'\s+', ' ', after_text[:24])
+
+                updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
                 updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
                 matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
@@ -76,7 +95,7 @@ def process_pdf(pdf_file):
                 ] if matching_check_phrase else [None] * 3
 
                 page_results.append({
-                    "phrase": phrase,
+                    "phrase": updated_phrase,
                     "page": page_num,
                     "line": line_num,
                     "base_text": base_text,
@@ -86,7 +105,7 @@ def process_pdf(pdf_file):
                     "matching_result_3": matching_results[0],
                     "matching_result_2": matching_results[1],
                     "matching_result_1": matching_results[2],
-                    "standard_type": "TCVN" if phrase.startswith("TCVN") else "QCVN" if phrase.startswith("QCVN") else "Unknown",
+                    "standard_type": base_text if base_text else "Unknown",
                     "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
                     "full_reference": f"{base_text} {after_text}".strip()
                 })
@@ -117,8 +136,8 @@ def upload_file():
     else:
         return jsonify({"error": "Invalid file type"}), 400
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)
