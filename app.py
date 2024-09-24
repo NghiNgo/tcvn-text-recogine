@@ -50,7 +50,11 @@ def process_pdf(pdf_file):
     first_col = df.columns[1]
     last_cols = df.columns[-3:]
     
-    check_phrases = df[first_col].str.strip().tolist()
+    if isinstance(df, pd.DataFrame):
+        check_phrases = df[first_col].str.strip().tolist()
+    else:
+        check_phrases = [str(item).strip() for item in df]
+
     results_dict = {
         f'col_{i}': dict(zip(df[first_col].str.strip(), df[col]))
         for i, col in enumerate(last_cols, start=-3)
@@ -94,6 +98,32 @@ def process_pdf(pdf_file):
                     for i in range(-3, 0)
                 ] if matching_check_phrase else [None] * 3
 
+                first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
+
+                if first_col_value is None and "TCVN" in phrase:
+                    custom_phrase = phrase.replace("-", ":")
+                    if custom_phrase.startswith("TCVN"):
+                        base_text = "TCVN"
+                        after_text = custom_phrase[4:].strip()
+                        index = page_text.find(custom_phrase, match.start())
+                        if index != -1:
+                            after_text = page_text[index+4:index+54].strip()
+                            for standard in standards:
+                                if standard in after_text:
+                                    after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                    break
+                            else:
+                                after_text = re.sub(r'\s+', ' ', after_text[:24])
+
+                    updated_phrase_normalized = re.sub(r'\s+', '', custom_phrase).strip()
+                    matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
+                    matching_results = [
+                        handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
+                        for i in range(-3, 0)
+                    ] if matching_check_phrase else [None] * 3
+
+                    first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
+
                 page_results.append({
                     "phrase": updated_phrase,
                     "page": page_num,
@@ -102,6 +132,7 @@ def process_pdf(pdf_file):
                     "after_text": after_text,
                     "updated_phrase": updated_phrase,
                     "matching_check_phrase": matching_check_phrase,
+                    "first_col_value": first_col_value,
                     "matching_result_3": matching_results[0],
                     "matching_result_2": matching_results[1],
                     "matching_result_1": matching_results[2],
@@ -136,8 +167,8 @@ def upload_file():
     else:
         return jsonify({"error": "Invalid file type"}), 400
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)

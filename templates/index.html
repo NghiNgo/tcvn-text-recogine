@@ -376,11 +376,14 @@
         text-align: center;
         transition: transform 0.2s, box-shadow 0.2s;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
       }
 
       .stat-item:hover {
         transform: translateY(-5px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        background-color: #e8f4fd;
       }
 
       .stat-item h3 {
@@ -438,6 +441,18 @@
         max-width: 200px;
         height: auto;
       }
+
+      .stat-item.active {
+        background-color: #3498db;
+        color: white;
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .stat-item.active h3,
+      .stat-item.active .stat-count {
+        color: white;
+      }
     </style>
   </head>
   <body>
@@ -471,63 +486,67 @@
     <div id="statistics-container" style="display: none">
       <h2>Thống kê</h2>
       <div class="stats-grid">
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('all')">
+          <h3>Tổng cộng</h3>
+          <span id="total-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item" onclick="filterByType('TCVN')">
           <h3>TCVN</h3>
           <span id="tcvn-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('QCVN')">
           <h3>QCVN</h3>
           <span id="qcvn-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('TCXD')">
           <h3>TCXD</h3>
           <span id="tcxd-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('TCXDVN')">
           <h3>TCXDVN</h3>
           <span id="tcxdvn-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('TCN')">
           <h3>TCN</h3>
           <span id="tcn-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('ACI')">
           <h3>ACI</h3>
           <span id="aci-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('ASTM')">
           <h3>ASTM</h3>
           <span id="astm-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('BHT')">
           <h3>BHT</h3>
           <span id="bht-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('IEC')">
           <h3>IEC</h3>
           <span id="iec-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('IEEE')">
           <h3>IEEE</h3>
           <span id="ieee-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('TCCS')">
           <h3>TCCS</h3>
           <span id="tccs-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('NFPA')">
           <h3>NFPA</h3>
           <span id="nfpa-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('TC')">
           <h3>TC</h3>
           <span id="tc-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('ITU')">
           <h3>ITU</h3>
           <span id="itu-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" onclick="filterByType('Unknown')">
           <h3>Không tìm thấy</h3>
           <span id="unknown-count" class="stat-count">0</span>
         </div>
@@ -541,7 +560,7 @@
         style="display: none"
       />
       <!-- <button onclick="applyFilters()">Tìm kiếm</button> -->
-      <select id="standard-type-select" onchange="applyFilters()">
+      <select id="standard-type-select" onchange="applyFilters()" style="display: none;">
         <option value="all">Tất cả</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
@@ -600,7 +619,7 @@
 
           document.getElementById("loading").style.display = "block";
           document.getElementById("results").innerHTML = "";
-          document.getElementById("search-container").style.display = "none";
+          // document.getElementById("search-container").style.display = "none";
 
           fetch("/upload", {
             method: "POST",
@@ -616,6 +635,7 @@
               allResults = data;
               filteredResults = allResults;
               const stats = calculateStatistics(allResults);
+              document.getElementById("total-count").textContent = Object.values(stats).reduce((a, b) => a + b, 0);
               document.getElementById("tcvn-count").textContent = stats.TCVN;
               document.getElementById("qcvn-count").textContent = stats.QCVN;
               document.getElementById("tcxd-count").textContent = stats.TCXD;
@@ -634,8 +654,8 @@
               document.getElementById("unknown-count").textContent =
                 stats.Unknown;
               displayResults(1);
-              document.getElementById("search-container").style.display =
-                "flex";
+              // document.getElementById("search-container").style.display =
+              //   "flex";
               document.getElementById("statistics-container").style.display =
                 "block";
               document.getElementById("download-xlsx").style.display =
@@ -652,6 +672,21 @@
               document.getElementById("loading").style.display = "none";
             });
         });
+        
+      function filterByType(type) {
+        document.querySelectorAll('.stat-item').forEach(item => {
+          item.classList.remove('active');
+        });
+
+        const clickedItem = document.querySelector(`.stat-item[onclick="filterByType('${type}')"]`);
+        if (clickedItem) {
+          clickedItem.classList.add('active');
+        }
+
+        document.getElementById('standard-type-select').value = type;
+        applyFilters();
+      }
+
 
       function displayResults(page) {
         currentPage = page;
@@ -678,7 +713,7 @@
               }<br>
                 ${
                   item.matching_check_phrase
-                    ? `<strong>Mã số:</strong> ${item.matching_check_phrase}<br>`
+                    ? `<strong>Mã số:</strong> ${item.first_col_value}<br>`
                     : `<strong>Mã số:</strong> <span style="color: brown;">Không tìm thấy</span><br>`
                 }
                 ${
