@@ -100,11 +100,12 @@ def process_pdf(pdf_file):
 
                 first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
 
-                if first_col_value is None and "TCVN" in phrase:
-                    custom_phrase = phrase.replace("-", ":")
-                    if custom_phrase.startswith("TCVN"):
-                        base_text = "TCVN"
-                        after_text = custom_phrase[4:].strip()
+                if first_col_value is None and ("TCVN" in phrase or "QCVN" in phrase):
+                    custom_phrase = updated_phrase.replace("-", ":")
+                    print(custom_phrase)
+                    if custom_phrase.startswith("TCVN") or custom_phrase.startswith("QCVN"):
+                        base_text = "TCVN" if custom_phrase.startswith("TCVN") else "QCVN"
+                        after_text = custom_phrase[4:].strip() if base_text == "TCVN" else custom_phrase[4:].strip()
                         index = page_text.find(custom_phrase, match.start())
                         if index != -1:
                             after_text = page_text[index+4:index+54].strip()
