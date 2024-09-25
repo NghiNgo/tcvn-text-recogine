@@ -32,6 +32,7 @@ def extract_text_from_pdf(pdf_file):
 def process_pdf(pdf_file):
     text = extract_text_from_pdf(pdf_file)
     results = []
+    het_hieu_luc_counter = [0]
     patterns = [
         r"TCVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"QCVN(?:\s+[A-Za-z0-9Đ-]+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*[A-Z]+)?)?",
@@ -104,6 +105,9 @@ def process_pdf(pdf_file):
                     for i in range(-3, 0)
                 ] if matching_check_phrase else [None] * 3
 
+                if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
+                    het_hieu_luc_counter[0] += 1
+
                 first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
 
                 if first_col_value is None and ("TCVN" in phrase or "QCVN" in phrase):
@@ -129,6 +133,9 @@ def process_pdf(pdf_file):
                         for i in range(-3, 0)
                     ] if matching_check_phrase else [None] * 3
 
+                    if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
+                        het_hieu_luc_counter[0] += 1
+
                     first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
 
                 page_results.append({
@@ -145,7 +152,8 @@ def process_pdf(pdf_file):
                     "matching_result_1": matching_results[2],
                     "standard_type": base_text if base_text else "Unknown",
                     "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
-                    "full_reference": f"{base_text} {after_text}".strip()
+                    "full_reference": f"{base_text} {after_text}".strip(),
+                    "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
                 })
                 
         return page_results
@@ -154,8 +162,12 @@ def process_pdf(pdf_file):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(process_page, pages))
     
-    return [item for sublist in results for item in sublist]
-
+    flattened_results = [item for sublist in results for item in sublist]
+    
+    return {
+        'results': flattened_results,
+        'het_hieu_luc_count': het_hieu_luc_counter[0]
+    }
 
 @app.route('/')
 def index():
@@ -169,8 +181,11 @@ def upload_file():
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
     if file and file.filename.endswith('.pdf'):
-        results = process_pdf(file)
-        return json.dumps(results, ensure_ascii=False, default=str)
+        processed_data = process_pdf(file)
+        return json.dumps({
+            'results': processed_data['results'],
+            'het_hieu_luc_count': processed_data['het_hieu_luc_count']
+        }, ensure_ascii=False, default=str)
     else:
         return jsonify({"error": "Invalid file type"}), 400
     

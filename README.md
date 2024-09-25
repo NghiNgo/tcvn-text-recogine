@@ -70,6 +70,7 @@ def extract_text_from_pdf(pdf_file):
 def process_pdf(pdf_file):
     text = extract_text_from_pdf(pdf_file)
     results = []
+    het_hieu_luc_counter = [0]
     patterns = [
         r"TCVN\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"QCVN(?:\s+[A-Za-z0-9Đ-]+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*[A-Z]+)?)?",
@@ -142,6 +143,9 @@ def process_pdf(pdf_file):
                     for i in range(-3, 0)
                 ] if matching_check_phrase else [None] * 3
 
+                if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
+                    het_hieu_luc_counter[0] += 1
+
                 first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
 
                 if first_col_value is None and ("TCVN" in phrase or "QCVN" in phrase):
@@ -167,6 +171,9 @@ def process_pdf(pdf_file):
                         for i in range(-3, 0)
                     ] if matching_check_phrase else [None] * 3
 
+                    if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
+                        het_hieu_luc_counter[0] += 1
+
                     first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
 
                 page_results.append({
@@ -183,7 +190,8 @@ def process_pdf(pdf_file):
                     "matching_result_1": matching_results[2],
                     "standard_type": base_text if base_text else "Unknown",
                     "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
-                    "full_reference": f"{base_text} {after_text}".strip()
+                    "full_reference": f"{base_text} {after_text}".strip(),
+                    "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
                 })
                 
         return page_results
@@ -192,8 +200,12 @@ def process_pdf(pdf_file):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(process_page, pages))
     
-    return [item for sublist in results for item in sublist]
-
+    flattened_results = [item for sublist in results for item in sublist]
+    
+    return {
+        'results': flattened_results,
+        'het_hieu_luc_count': het_hieu_luc_counter[0]
+    }
 
 @app.route('/')
 def index():
@@ -207,8 +219,11 @@ def upload_file():
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
     if file and file.filename.endswith('.pdf'):
-        results = process_pdf(file)
-        return json.dumps(results, ensure_ascii=False, default=str)
+        processed_data = process_pdf(file)
+        return json.dumps({
+            'results': processed_data['results'],
+            'het_hieu_luc_count': processed_data['het_hieu_luc_count']
+        }, ensure_ascii=False, default=str)
     else:
         return jsonify({"error": "Invalid file type"}), 400
     
@@ -864,6 +879,20 @@ if __name__ == '__main__':
       #feedback-form #cancel-feedback:hover {
         background-color: #c0392b !important;
       }
+
+      .stat-item.het-hieu-luc {
+        background-color: #e74c3c;
+        color: white;
+      }
+
+      .stat-item.het-hieu-luc h3,
+      .stat-item.het-hieu-luc .stat-count {
+        color: white;
+      }
+
+      .stat-item.het-hieu-luc:hover {
+        background-color: #c0392b;
+      }
     </style>
   </head>
   <body>
@@ -962,6 +991,10 @@ if __name__ == '__main__':
           <h3>Không tìm thấy</h3>
           <span id="unknown-count" class="stat-count">0</span>
         </div>
+        <div class="stat-item het-hieu-luc" onclick="filterByType('HetHieuLuc')">
+          <h3>Hết hiệu lực</h3>
+          <span id="het-hieu-luc-count" class="stat-count">0</span>
+        </div>
       </div>
     </div>
     <div id="search-container" style="display: none">
@@ -992,6 +1025,7 @@ if __name__ == '__main__':
         <option value="NFPA">NFPA</option>
         <option value="TC">TC</option>
         <option value="ITU">ITU</option>
+        <option value="HetHieuLuc">Hết hiệu lực</option>
         <option value="Unknown">Không tìm thấy</option>
       </select>
     </div>
@@ -1087,31 +1121,45 @@ if __name__ == '__main__':
               return response.json();
             })
             .then((data) => {
-              allResults = data;
+              allResults = data.results;
               filteredResults = allResults;
               const stats = calculateStatistics(allResults);
               document.getElementById("total-count").textContent =
-                Object.values(stats).reduce((a, b) => a + b, 0);
-              document.getElementById("tcvn-count").textContent = stats.TCVN;
-              document.getElementById("qcvn-count").textContent = stats.QCVN;
-              document.getElementById("tcxd-count").textContent = stats.TCXD;
-              document.getElementById("tcxdvn-count").textContent =
-                stats.TCXDVN;
-              document.getElementById("tcn-count").textContent = stats.TCN;
-              document.getElementById("aci-count").textContent = stats.ACI;
-              document.getElementById("astm-count").textContent = stats.ASTM;
-              document.getElementById("bht-count").textContent = stats.BHT;
-              document.getElementById("iec-count").textContent = stats.IEC;
-              document.getElementById("ieee-count").textContent = stats.IEEE;
-              document.getElementById("tccs-count").textContent = stats.TCCS;
-              document.getElementById("nfpa-count").textContent = stats.NFPA;
-              document.getElementById("tc-count").textContent = stats.TC;
-              document.getElementById("itu-count").textContent = stats.ITU;
-              document.getElementById("unknown-count").textContent =
-                stats.Unknown;
+                Object.entries(stats).reduce((total, [key, value]) => {
+                  return key !== 'HetHieuLuc' ? total + value : total;
+                }, 0);
+
+              const statItems = {
+                tcvn: "TCVN",
+                qcvn: "QCVN",
+                tcxd: "TCXD",
+                tcxdvn: "TCXDVN",
+                tcn: "TCN",
+                aci: "ACI",
+                astm: "ASTM",
+                bht: "BHT",
+                iec: "IEC",
+                ieee: "IEEE",
+                tccs: "TCCS",
+                nfpa: "NFPA",
+                tc: "TC",
+                itu: "ITU",
+                unknown: "Unknown",
+                "het-hieu-luc": "HetHieuLuc",
+              };
+
+              for (const [id, type] of Object.entries(statItems)) {
+                const count =
+                  type === "HetHieuLuc" ? data.het_hieu_luc_count : stats[type];
+                const element = document.getElementById(`${id}-count`);
+                if (element) {
+                  element.textContent = count;
+                  element.closest(".stat-item").style.display =
+                    count > 0 ? "block" : "none";
+                }
+              }
+
               displayResults(1);
-              // document.getElementById("search-container").style.display =
-              //   "flex";
               document.getElementById("statistics-container").style.display =
                 "block";
               document.getElementById("download-xlsx").style.display =
@@ -1229,6 +1277,14 @@ if __name__ == '__main__':
 
       const changeLog = [
         {
+          version: "1.3",
+          date: "2024-09-25",
+          changes: [
+            "Thêm phần góp ý & báo lỗi",
+            "Thêm thống kê Hết hiệu lực",
+          ],
+        },
+        {
           version: "1.2",
           date: "2024-09-24",
           changes: [
@@ -1332,6 +1388,9 @@ if __name__ == '__main__':
           const matchesType =
             selectedType === "all" ||
             (selectedType === "Unknown" && !item.matching_check_phrase) ||
+            (selectedType === "HetHieuLuc" &&
+              item.matching_result_3 &&
+              item.matching_result_3.includes("Hết hiệu lực")) ||
             (item.matching_check_phrase &&
               isLikeMatch(item.matching_check_phrase, selectedType));
 
@@ -1364,9 +1423,16 @@ if __name__ == '__main__':
           TC: 0,
           ITU: 0,
           Unknown: 0,
+          HetHieuLuc: 0,
         };
 
         results.forEach((item) => {
+          if (
+            item.matching_result_3 &&
+            item.matching_result_3.includes("Hết hiệu lực")
+          ) {
+            stats.HetHieuLuc++;
+          }
           if (item.matching_check_phrase) {
             let matched = false;
             for (const prefix in stats) {
@@ -1455,7 +1521,6 @@ if __name__ == '__main__':
     </script>
   </body>
 </html>
-
 ```
 
 5. Create file `manage_feedback.html`
