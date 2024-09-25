@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Feedback</title>
+    <title>Quản Lý Phản Hồi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='evn.png') }}"
+      type="image/png"
+    />
     <style>
         body {
             font-family: "Open Sans", sans-serif;
@@ -190,57 +195,57 @@
 </head>
 <body>
     <div class="container">
-        <h1>Manage Feedback</h1>
+        <h1>Quản Lý Phản Hồi</h1>
         
         <div class="statistics">
             <div class="stat-item stat-pending">
                 <div class="count" id="pending-count">0</div>
-                <div class="label">Pending</div>
+                <div class="label">Đang Chờ</div>
             </div>
             <div class="stat-item stat-resolved">
                 <div class="count" id="resolved-count">0</div>
-                <div class="label">Resolved</div>
+                <div class="label">Đã Giải Quyết</div>
             </div>
         </div>
 
         <div class="tabs">
-            <div class="tab all active" onclick="showTab('all')">All</div>
-            <div class="tab pending" onclick="showTab('pending')">Pending</div>
-            <div class="tab resolved" onclick="showTab('resolved')">Resolved</div>
+            <div class="tab all active" onclick="showTab('all')">Tất Cả</div>
+            <div class="tab pending" onclick="showTab('pending')">Đang Chờ</div>
+            <div class="tab resolved" onclick="showTab('resolved')">Đã Giải Quyết</div>
         </div>
 
         <div id="feedback-list">
             {% for item in feedback %}
                 <div class="feedback-item" data-status="{{ item.status }}">
-                    <h3>Feedback #{{ item.feedback_id[:8] }}</h3>
-                    <p><strong>Name:</strong> {{ item.name }}</p>
-                    <p><strong>Department:</strong> {{ item.department }}</p>
-                    <p><strong>Content:</strong> {{ item.content }}</p>
-                    <p><strong>Submitted:</strong> {{ item.timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
-                    <p><strong>Status:</strong> <span class="status-{{ item.status }}">{{ item.status }}</span></p>
+                    <h3>Phản Hồi #{{ item.feedback_id[:8] }}</h3>
+                    <p><strong>Tên:</strong> {{ item.name }}</p>
+                    <p><strong>Phòng Ban:</strong> {{ item.department }}</p>
+                    <p><strong>Nội Dung:</strong> {{ item.content }}</p>
+                    <p><strong>Đã Gửi:</strong> {{ item.timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    <p><strong>Trạng Thái:</strong> <span class="status-{{ item.status }}">{{ item.status }}</span></p>
                     {% if item.pending_timestamp %}
-                        <p><strong>Pending since:</strong> {{ item.pending_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                        <p><strong>Đang Chờ Từ:</strong> {{ item.pending_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
                     {% endif %}
                     {% if item.resolve_time %}
-                        <p><strong>Resolved on:</strong> {{ item.resolve_time|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                        <p><strong>Đã Giải Quyết Vào:</strong> {{ item.resolve_time|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
                     {% endif %}
                     {% if item.attachment %}
-                        <p><strong>Attachment:</strong> <a href="{{ url_for('serve_feedback_attachment', filename=item.attachment) }}" target="_blank">View Attachment</a></p>
+                        <p><strong>Tệp Đính Kèm:</strong> <a href="{{ url_for('serve_feedback_attachment', filename=item.attachment) }}" target="_blank">Xem Tệp Đính Kèm</a></p>
                     {% endif %}
                     <select id="status-{{ item.feedback_id }}">
-                        <option value="pending" {% if item.status == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="resolved" {% if item.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="pending" {% if item.status == 'pending' %}selected{% endif %}>Đang Chờ</option>
+                        <option value="resolved" {% if item.status == 'resolved' %}selected{% endif %}>Đã Giải Quyết</option>
                     </select>
-                    <input type="text" id="resolved-by-{{ item.feedback_id }}" placeholder="Resolved by" value="{{ item.resolved_by or '' }}">
-                    <button onclick="updateStatus('{{ item.feedback_id }}')">Update Status</button>
+                    <input type="text" id="resolved-by-{{ item.feedback_id }}" placeholder="Người Giải Quyết" value="{{ item.resolved_by or '' }}">
+                    <button onclick="updateStatus('{{ item.feedback_id }}')">Cập Nhật Trạng Thái</button>
                 </div>
             {% endfor %}
         </div>
 
         <div class="pagination">
-            <button onclick="changePage(-1)">Previous</button>
-            <span id="page-info">Page 1 of 1</span>
-            <button onclick="changePage(1)">Next</button>
+            <button onclick="changePage(-1)">Trước</button>
+            <span id="page-info">Trang 1 / 1</span>
+            <button onclick="changePage(1)">Sau</button>
         </div>
     </div>
 
@@ -300,7 +305,7 @@
             const prevButton = document.querySelector('.pagination button:first-child');
             const nextButton = document.querySelector('.pagination button:last-child');
             
-            document.getElementById('page-info').textContent = `Page ${currentPage} of ${pageCount}`;
+            document.getElementById('page-info').textContent = `Trang ${currentPage} / ${pageCount}`;
             
             prevButton.disabled = currentPage === 1;
             nextButton.disabled = currentPage === pageCount;

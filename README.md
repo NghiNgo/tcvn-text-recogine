@@ -45,8 +45,14 @@ import numpy as np
 import json
 import concurrent.futures
 import multiprocessing
+import os
+from datetime import datetime
+from werkzeug.utils import secure_filename
+from flask import send_from_directory
+import uuid
 
 app = Flask(__name__)
+os.makedirs(os.path.join(app.root_path, 'uploads', 'feedback'), exist_ok=True)
 
 def extract_page_text(page):
     return page.extract_text()
@@ -205,9 +211,97 @@ def upload_file():
         return json.dumps(results, ensure_ascii=False, default=str)
     else:
         return jsonify({"error": "Invalid file type"}), 400
+    
+UPLOAD_FOLDER = 'uploads/feedback'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+@app.route('/submit-feedback', methods=['POST'])
+def submit_feedback():
+    data = request.form.to_dict()
+    data['feedback_id'] = str(uuid.uuid4())
+    data['timestamp'] = datetime.now().isoformat()
+    data['status'] = 'pending'
+    data['ip_address'] = request.remote_addr
+    data['user_agent'] = request.user_agent.string
+    data['resolve_time'] = None
+    data['resolved_by'] = None
+
+    if 'attachment' in request.files:
+        file = request.files['attachment']
+        if file.filename != '':
+            filename = secure_filename(f"{data['timestamp']}_{file.filename}")
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            data['attachment'] = filename
+
+    feedback_file = 'feedback.json'
+    
+    if not os.path.exists(feedback_file):
+        with open(feedback_file, 'w') as f:
+            json.dump([], f)
+
+    try:
+        with open(feedback_file, 'r') as f:
+            content = f.read()
+            feedback_data = json.loads(content) if content else []
+    except json.JSONDecodeError:
+        feedback_data = []
+
+    feedback_data.append(data)
+
+    with open('feedback.json', 'w') as f:
+        json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+
+    return jsonify({"message": "Feedback submitted successfully"}), 200
+
+@app.route('/uploads/feedback/<filename>')
+def serve_feedback_attachment(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/manage-feedback')
+def manage_feedback():
+    try:
+        with open('feedback.json', 'r') as f:
+            feedback_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        feedback_data = []
+    
+    return render_template('manage_feedback.html', feedback=feedback_data)
+
+@app.route('/update-feedback-status', methods=['POST'])
+def update_feedback_status():
+    feedback_id = request.form.get('feedback_id')
+    new_status = request.form.get('status')
+    resolved_by = request.form.get('resolved_by')
+
+    try:
+        with open('feedback.json', 'r') as f:
+            feedback_data = json.load(f)
+        
+        for item in feedback_data:
+            if item['feedback_id'] == feedback_id:
+                item['status'] = new_status
+                item['resolved_by'] = resolved_by
+                if new_status == 'resolved':
+                    item['resolve_time'] = datetime.now().isoformat()
+        
+        with open('feedback.json', 'w') as f:
+            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+        
+        return jsonify({"message": "Feedback status updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.template_filter('parse_timestamp')
+def parse_timestamp(timestamp_str, format_str):
+    try:
+        dt = datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S.%f')
+        return dt.strftime(format_str)
+    except ValueError:
+        return timestamp_str 
+ 
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)
@@ -672,6 +766,104 @@ def upload_file():
       .stat-item.active .stat-count {
         color: white;
       }
+
+      #feedback-text {
+        width: 96%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        resize: vertical;
+        font-family: "Open Sans", sans-serif;
+      }
+
+      #feedback-form button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-weight: 700;
+      }
+
+      .right-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      #feedback {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        background-color: #ffc107;
+        color: #212529;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-left: auto;
+      }
+
+      #feedback:hover {
+        background-color: #e0a800;
+        color: #212529;
+      }
+
+      #feedback-form input[type="text"],
+      #feedback-form input[type="tel"],
+      #feedback-form textarea {
+        width: 96%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        font-family: "Open Sans", sans-serif;
+      }
+
+      #feedback-form input[type="file"] {
+        width: 96%;
+        margin-bottom: 10px;
+      }
+
+      #feedback-form button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #ffc107;
+        color: #212529;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-weight: 700;
+      }
+
+      #feedback-form button:hover {
+        background-color: #e0a800;
+        color: #212529;
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .button-group button {
+        flex: 1;
+      }
+
+      #feedback-form #cancel-feedback {
+        background-color: #e74c3c !important;
+      }
+
+      #feedback-form #cancel-feedback:hover {
+        background-color: #c0392b !important;
+      }
     </style>
   </head>
   <body>
@@ -695,7 +887,8 @@ def upload_file():
             Tải xuống XLSX
           </a>
         </div>
-        <div>
+        <div class="right-buttons">
+          <a id="feedback" href="#" class="button">Góp ý & báo lỗi</a>
           <a id="open-changelog" href="#" class="button"
             >Xem nhật ký thay đổi</a
           >
@@ -779,7 +972,11 @@ def upload_file():
         style="display: none"
       />
       <!-- <button onclick="applyFilters()">Tìm kiếm</button> -->
-      <select id="standard-type-select" onchange="applyFilters()" style="display: none;">
+      <select
+        id="standard-type-select"
+        onchange="applyFilters()"
+        style="display: none"
+      >
         <option value="all">Tất cả</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
@@ -813,6 +1010,45 @@ def upload_file():
         <ul id="changelog-list"></ul>
       </div>
     </div>
+
+    <div id="feedback-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 class="modal-title">Góp ý & Báo lỗi</h2>
+        <form id="feedback-form">
+          <input
+            type="text"
+            id="feedback-name"
+            placeholder="Họ và tên"
+            required
+          />
+          <input
+            type="tel"
+            id="feedback-phone"
+            placeholder="Số điện thoại"
+            required
+          />
+          <input
+            type="text"
+            id="feedback-department"
+            placeholder="Phòng ban"
+            required
+          />
+          <textarea
+            id="feedback-content"
+            rows="5"
+            placeholder="Nội dung góp ý hoặc báo lỗi..."
+            required
+          ></textarea>
+          <input type="file" id="feedback-attachment" accept="image/*" />
+          <div class="button-group">
+            <button type="submit">Gửi</button>
+            <button type="button" id="cancel-feedback">Huỷ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script>
       let allResults = [];
       let filteredResults = [];
@@ -854,7 +1090,8 @@ def upload_file():
               allResults = data;
               filteredResults = allResults;
               const stats = calculateStatistics(allResults);
-              document.getElementById("total-count").textContent = Object.values(stats).reduce((a, b) => a + b, 0);
+              document.getElementById("total-count").textContent =
+                Object.values(stats).reduce((a, b) => a + b, 0);
               document.getElementById("tcvn-count").textContent = stats.TCVN;
               document.getElementById("qcvn-count").textContent = stats.QCVN;
               document.getElementById("tcxd-count").textContent = stats.TCXD;
@@ -891,21 +1128,22 @@ def upload_file():
               document.getElementById("loading").style.display = "none";
             });
         });
-        
+
       function filterByType(type) {
-        document.querySelectorAll('.stat-item').forEach(item => {
-          item.classList.remove('active');
+        document.querySelectorAll(".stat-item").forEach((item) => {
+          item.classList.remove("active");
         });
 
-        const clickedItem = document.querySelector(`.stat-item[onclick="filterByType('${type}')"]`);
+        const clickedItem = document.querySelector(
+          `.stat-item[onclick="filterByType('${type}')"]`
+        );
         if (clickedItem) {
-          clickedItem.classList.add('active');
+          clickedItem.classList.add("active");
         }
 
-        document.getElementById('standard-type-select').value = type;
+        document.getElementById("standard-type-select").value = type;
         applyFilters();
       }
-
 
       function displayResults(page) {
         currentPage = page;
@@ -1013,7 +1251,7 @@ def upload_file():
             "Chức năng xử lý PDF cơ bản",
             "Khả năng tìm kiếm và lọc",
           ],
-        }
+        },
       ];
 
       function displayChangeLog() {
@@ -1148,14 +1386,426 @@ def upload_file():
 
         return stats;
       }
+
+      const feedbackModal = document.getElementById("feedback-modal");
+      const feedbackBtn = document.getElementById("feedback");
+      const feedbackClose = feedbackModal.getElementsByClassName("close")[0];
+
+      feedbackBtn.onclick = function (e) {
+        e.preventDefault();
+        feedbackModal.style.display = "block";
+      };
+
+      feedbackClose.onclick = function () {
+        feedbackModal.style.display = "none";
+      };
+
+      document.getElementById("feedback-form").onsubmit = function (e) {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append("name", document.getElementById("feedback-name").value);
+        formData.append(
+          "phone",
+          document.getElementById("feedback-phone").value
+        );
+        formData.append(
+          "department",
+          document.getElementById("feedback-department").value
+        );
+        formData.append(
+          "content",
+          document.getElementById("feedback-content").value
+        );
+
+        const attachment = document.getElementById("feedback-attachment")
+          .files[0];
+        if (attachment) {
+          formData.append("attachment", attachment);
+        }
+
+        fetch("/submit-feedback", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            alert("Cảm ơn bạn đã gửi góp ý!");
+            feedbackModal.style.display = "none";
+            document.getElementById("feedback-form").reset();
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Có lỗi xảy ra khi gửi góp ý. Vui lòng thử lại sau.");
+          });
+      };
+
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+        if (event.target == feedbackModal) {
+          feedbackModal.style.display = "none";
+        }
+      };
+
+      document.getElementById("cancel-feedback").onclick = function () {
+        feedbackModal.style.display = "none";
+        document.getElementById("feedback-form").reset();
+      };
     </script>
   </body>
 </html>
+
 ```
 
-5. Create file TCKT.xlsx
+5. Create file `manage_feedback.html`
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Phản Hồi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='evn.png') }}"
+      type="image/png"
+    />
+    <style>
+        body {
+            font-family: "Open Sans", sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        .feedback-item {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .feedback-item:hover {
+            transform: translateY(-2px);
+        }
+        .feedback-item h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .status-pending {
+            color: #ffa500;
+        }
+        .status-resolved {
+            color: #2ecc71;
+        }
+        select, input[type="text"] {
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: "Open Sans", sans-serif;
+            transition: border-color 0.3s;
+        }
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 700;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: #2980b9;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            transition: background-color 0.3s, color 0.3s;
+            margin: 0 5px;
+            border-radius: 4px;
+        }
+        .tab:hover {
+            background-color: #e0e0e0;
+        }
+        .tab.active {
+            color: white;
+            font-weight: bold;
+        }
+        .tab.all.active {
+            background-color: #3498db;
+        }
+        .tab.pending.active {
+            background-color: #ffa500;
+        }
+        .tab.resolved.active {
+            background-color: #2ecc71;
+        }
+        .status-pending {
+            color: #ffa500;
+        }
+        .status-resolved {
+            color: #2ecc71;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            margin: 0 5px;
+            padding: 8px 12px;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .pagination button:hover {
+            background-color: #bdc3c7;
+        }
+        .pagination button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        #page-info {
+            margin: 0 10px;
+            align-self: center;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .statistics {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            transition: transform 0.2s;
+        }
+        .stat-item:hover {
+            transform: translateY(-2px);
+        }
+        .stat-item .count {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-item .label {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .stat-pending {
+            color: #ffa500;
+            background-color: rgba(255, 165, 0, 0.1);
+        }
+        .stat-resolved {
+            color: #2ecc71;
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quản Lý Phản Hồi</h1>
+        
+        <div class="statistics">
+            <div class="stat-item stat-pending">
+                <div class="count" id="pending-count">0</div>
+                <div class="label">Đang Chờ</div>
+            </div>
+            <div class="stat-item stat-resolved">
+                <div class="count" id="resolved-count">0</div>
+                <div class="label">Đã Giải Quyết</div>
+            </div>
+        </div>
 
-6. Create a `wsgi.py` file in the project root with the following content:
+        <div class="tabs">
+            <div class="tab all active" onclick="showTab('all')">Tất Cả</div>
+            <div class="tab pending" onclick="showTab('pending')">Đang Chờ</div>
+            <div class="tab resolved" onclick="showTab('resolved')">Đã Giải Quyết</div>
+        </div>
+
+        <div id="feedback-list">
+            {% for item in feedback %}
+                <div class="feedback-item" data-status="{{ item.status }}">
+                    <h3>Phản Hồi #{{ item.feedback_id[:8] }}</h3>
+                    <p><strong>Tên:</strong> {{ item.name }}</p>
+                    <p><strong>Phòng Ban:</strong> {{ item.department }}</p>
+                    <p><strong>Nội Dung:</strong> {{ item.content }}</p>
+                    <p><strong>Đã Gửi:</strong> {{ item.timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    <p><strong>Trạng Thái:</strong> <span class="status-{{ item.status }}">{{ item.status }}</span></p>
+                    {% if item.pending_timestamp %}
+                        <p><strong>Đang Chờ Từ:</strong> {{ item.pending_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% endif %}
+                    {% if item.resolve_time %}
+                        <p><strong>Đã Giải Quyết Vào:</strong> {{ item.resolve_time|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% endif %}
+                    {% if item.attachment %}
+                        <p><strong>Tệp Đính Kèm:</strong> <a href="{{ url_for('serve_feedback_attachment', filename=item.attachment) }}" target="_blank">Xem Tệp Đính Kèm</a></p>
+                    {% endif %}
+                    <select id="status-{{ item.feedback_id }}">
+                        <option value="pending" {% if item.status == 'pending' %}selected{% endif %}>Đang Chờ</option>
+                        <option value="resolved" {% if item.status == 'resolved' %}selected{% endif %}>Đã Giải Quyết</option>
+                    </select>
+                    <input type="text" id="resolved-by-{{ item.feedback_id }}" placeholder="Người Giải Quyết" value="{{ item.resolved_by or '' }}">
+                    <button onclick="updateStatus('{{ item.feedback_id }}')">Cập Nhật Trạng Thái</button>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="pagination">
+            <button onclick="changePage(-1)">Trước</button>
+            <span id="page-info">Trang 1 / 1</span>
+            <button onclick="changePage(1)">Sau</button>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let currentTab = 'all';
+
+        function updateStatus(feedbackId) {
+            const status = document.getElementById(`status-${feedbackId}`).value;
+            const resolvedBy = document.getElementById(`resolved-by-${feedbackId}`).value;
+            
+            fetch('/update-feedback-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `feedback_id=${feedbackId}&status=${status}&resolved_by=${resolvedBy}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                location.reload();
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the status.');
+            });
+        }
+
+        function showTab(status) {
+            currentTab = status;
+            currentPage = 1;
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const items = document.querySelectorAll('.feedback-item');
+            let visibleItems = 0;
+            items.forEach((item, index) => {
+                const itemStatus = item.dataset.status;
+                const isVisible = (currentTab === 'all' || itemStatus === currentTab) &&
+                                  (index >= (currentPage - 1) * itemsPerPage && index < currentPage * itemsPerPage);
+                item.style.display = isVisible ? 'block' : 'none';
+                if (isVisible) visibleItems++;
+            });
+
+            updatePagination(items.length);
+            updateStatistics();
+        }
+
+        function updatePagination(totalItems) {
+            const pageCount = Math.ceil(totalItems / itemsPerPage);
+            const prevButton = document.querySelector('.pagination button:first-child');
+            const nextButton = document.querySelector('.pagination button:last-child');
+            
+            document.getElementById('page-info').textContent = `Page ${currentPage} of ${pageCount}`;
+            
+            prevButton.disabled = currentPage === 1;
+            nextButton.disabled = currentPage === pageCount;
+            
+            prevButton.classList.toggle('active', currentPage !== 1);
+            nextButton.classList.toggle('active', currentPage !== pageCount);
+        }
+
+        function changePage(direction) {
+            const items = document.querySelectorAll('.feedback-item');
+            const pageCount = Math.ceil(items.length / itemsPerPage);
+            currentPage += direction;
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > pageCount) currentPage = pageCount;
+            updateDisplay();
+        }
+
+        function updateStatistics() {
+            const items = document.querySelectorAll('.feedback-item');
+            let counts = {pending: 0, in_progress: 0, resolved: 0};
+            items.forEach(item => {
+                const status = item.dataset.status;
+                counts[status]++;
+            });
+            document.getElementById('pending-count').textContent = counts.pending;
+            document.getElementById('resolved-count').textContent = counts.resolved;
+        }
+
+        // Initial display update
+        updateDisplay();
+    </script>
+</body>
+</html>
+```
+
+6. Create file TCKT.xlsx
+
+7. Create a `wsgi.py` file in the project root with the following content:
   ```
   from app import app
 
