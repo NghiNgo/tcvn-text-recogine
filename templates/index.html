@@ -779,26 +779,36 @@
               const stats = calculateStatistics(allResults);
               document.getElementById("total-count").textContent =
                 Object.values(stats).reduce((a, b) => a + b, 0);
-              document.getElementById("tcvn-count").textContent = stats.TCVN;
-              document.getElementById("qcvn-count").textContent = stats.QCVN;
-              document.getElementById("tcxd-count").textContent = stats.TCXD;
-              document.getElementById("tcxdvn-count").textContent =
-                stats.TCXDVN;
-              document.getElementById("tcn-count").textContent = stats.TCN;
-              document.getElementById("aci-count").textContent = stats.ACI;
-              document.getElementById("astm-count").textContent = stats.ASTM;
-              document.getElementById("bht-count").textContent = stats.BHT;
-              document.getElementById("iec-count").textContent = stats.IEC;
-              document.getElementById("ieee-count").textContent = stats.IEEE;
-              document.getElementById("tccs-count").textContent = stats.TCCS;
-              document.getElementById("nfpa-count").textContent = stats.NFPA;
-              document.getElementById("tc-count").textContent = stats.TC;
-              document.getElementById("itu-count").textContent = stats.ITU;
-              document.getElementById("unknown-count").textContent =
-                stats.Unknown;
+
+              const statItems = {
+                tcvn: "TCVN",
+                qcvn: "QCVN",
+                tcxd: "TCXD",
+                tcxdvn: "TCXDVN",
+                tcn: "TCN",
+                aci: "ACI",
+                astm: "ASTM",
+                bht: "BHT",
+                iec: "IEC",
+                ieee: "IEEE",
+                tccs: "TCCS",
+                nfpa: "NFPA",
+                tc: "TC",
+                itu: "ITU",
+                unknown: "Unknown",
+              };
+
+              for (const [id, type] of Object.entries(statItems)) {
+                const count = stats[type];
+                const element = document.getElementById(`${id}-count`);
+                if (element) {
+                  element.textContent = count;
+                  element.closest(".stat-item").style.display =
+                    count > 0 ? "block" : "none";
+                }
+              }
+
               displayResults(1);
-              // document.getElementById("search-container").style.display =
-              //   "flex";
               document.getElementById("statistics-container").style.display =
                 "block";
               document.getElementById("download-xlsx").style.display =
