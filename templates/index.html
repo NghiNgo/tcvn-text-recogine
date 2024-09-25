@@ -453,6 +453,104 @@
       .stat-item.active .stat-count {
         color: white;
       }
+
+      #feedback-text {
+        width: 96%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        resize: vertical;
+        font-family: "Open Sans", sans-serif;
+      }
+
+      #feedback-form button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-weight: 700;
+      }
+
+      .right-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      #feedback {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        background-color: #ffc107;
+        color: #212529;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-left: auto;
+      }
+
+      #feedback:hover {
+        background-color: #e0a800;
+        color: #212529;
+      }
+
+      #feedback-form input[type="text"],
+      #feedback-form input[type="tel"],
+      #feedback-form textarea {
+        width: 96%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        font-family: "Open Sans", sans-serif;
+      }
+
+      #feedback-form input[type="file"] {
+        width: 96%;
+        margin-bottom: 10px;
+      }
+
+      #feedback-form button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #ffc107;
+        color: #212529;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-weight: 700;
+      }
+
+      #feedback-form button:hover {
+        background-color: #e0a800;
+        color: #212529;
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .button-group button {
+        flex: 1;
+      }
+
+      #feedback-form #cancel-feedback {
+        background-color: #e74c3c !important;
+      }
+
+      #feedback-form #cancel-feedback:hover {
+        background-color: #c0392b !important;
+      }
     </style>
   </head>
   <body>
@@ -476,7 +574,8 @@
             Tải xuống XLSX
           </a>
         </div>
-        <div>
+        <div class="right-buttons">
+          <a id="feedback" href="#" class="button">Góp ý & báo lỗi</a>
           <a id="open-changelog" href="#" class="button"
             >Xem nhật ký thay đổi</a
           >
@@ -560,7 +659,11 @@
         style="display: none"
       />
       <!-- <button onclick="applyFilters()">Tìm kiếm</button> -->
-      <select id="standard-type-select" onchange="applyFilters()" style="display: none;">
+      <select
+        id="standard-type-select"
+        onchange="applyFilters()"
+        style="display: none"
+      >
         <option value="all">Tất cả</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
@@ -594,6 +697,45 @@
         <ul id="changelog-list"></ul>
       </div>
     </div>
+
+    <div id="feedback-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 class="modal-title">Góp ý & Báo lỗi</h2>
+        <form id="feedback-form">
+          <input
+            type="text"
+            id="feedback-name"
+            placeholder="Họ và tên"
+            required
+          />
+          <input
+            type="tel"
+            id="feedback-phone"
+            placeholder="Số điện thoại"
+            required
+          />
+          <input
+            type="text"
+            id="feedback-department"
+            placeholder="Phòng ban"
+            required
+          />
+          <textarea
+            id="feedback-content"
+            rows="5"
+            placeholder="Nội dung góp ý hoặc báo lỗi..."
+            required
+          ></textarea>
+          <input type="file" id="feedback-attachment" accept="image/*" />
+          <div class="button-group">
+            <button type="submit">Gửi</button>
+            <button type="button" id="cancel-feedback">Huỷ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script>
       let allResults = [];
       let filteredResults = [];
@@ -635,7 +777,8 @@
               allResults = data;
               filteredResults = allResults;
               const stats = calculateStatistics(allResults);
-              document.getElementById("total-count").textContent = Object.values(stats).reduce((a, b) => a + b, 0);
+              document.getElementById("total-count").textContent =
+                Object.values(stats).reduce((a, b) => a + b, 0);
               document.getElementById("tcvn-count").textContent = stats.TCVN;
               document.getElementById("qcvn-count").textContent = stats.QCVN;
               document.getElementById("tcxd-count").textContent = stats.TCXD;
@@ -672,21 +815,22 @@
               document.getElementById("loading").style.display = "none";
             });
         });
-        
+
       function filterByType(type) {
-        document.querySelectorAll('.stat-item').forEach(item => {
-          item.classList.remove('active');
+        document.querySelectorAll(".stat-item").forEach((item) => {
+          item.classList.remove("active");
         });
 
-        const clickedItem = document.querySelector(`.stat-item[onclick="filterByType('${type}')"]`);
+        const clickedItem = document.querySelector(
+          `.stat-item[onclick="filterByType('${type}')"]`
+        );
         if (clickedItem) {
-          clickedItem.classList.add('active');
+          clickedItem.classList.add("active");
         }
 
-        document.getElementById('standard-type-select').value = type;
+        document.getElementById("standard-type-select").value = type;
         applyFilters();
       }
-
 
       function displayResults(page) {
         currentPage = page;
@@ -794,7 +938,7 @@
             "Chức năng xử lý PDF cơ bản",
             "Khả năng tìm kiếm và lọc",
           ],
-        }
+        },
       ];
 
       function displayChangeLog() {
@@ -929,6 +1073,72 @@
 
         return stats;
       }
+
+      const feedbackModal = document.getElementById("feedback-modal");
+      const feedbackBtn = document.getElementById("feedback");
+      const feedbackClose = feedbackModal.getElementsByClassName("close")[0];
+
+      feedbackBtn.onclick = function (e) {
+        e.preventDefault();
+        feedbackModal.style.display = "block";
+      };
+
+      feedbackClose.onclick = function () {
+        feedbackModal.style.display = "none";
+      };
+
+      document.getElementById("feedback-form").onsubmit = function (e) {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append("name", document.getElementById("feedback-name").value);
+        formData.append(
+          "phone",
+          document.getElementById("feedback-phone").value
+        );
+        formData.append(
+          "department",
+          document.getElementById("feedback-department").value
+        );
+        formData.append(
+          "content",
+          document.getElementById("feedback-content").value
+        );
+
+        const attachment = document.getElementById("feedback-attachment")
+          .files[0];
+        if (attachment) {
+          formData.append("attachment", attachment);
+        }
+
+        fetch("/submit-feedback", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            alert("Cảm ơn bạn đã gửi góp ý!");
+            feedbackModal.style.display = "none";
+            document.getElementById("feedback-form").reset();
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Có lỗi xảy ra khi gửi góp ý. Vui lòng thử lại sau.");
+          });
+      };
+
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+        if (event.target == feedbackModal) {
+          feedbackModal.style.display = "none";
+        }
+      };
+
+      document.getElementById("cancel-feedback").onclick = function () {
+        feedbackModal.style.display = "none";
+        document.getElementById("feedback-form").reset();
+      };
     </script>
   </body>
 </html>

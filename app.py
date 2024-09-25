@@ -7,8 +7,14 @@ import numpy as np
 import json
 import concurrent.futures
 import multiprocessing
+import os
+from datetime import datetime
+from werkzeug.utils import secure_filename
+from flask import send_from_directory
+import uuid
 
 app = Flask(__name__)
+os.makedirs(os.path.join(app.root_path, 'uploads', 'feedback'), exist_ok=True)
 
 def extract_page_text(page):
     return page.extract_text()
@@ -167,9 +173,97 @@ def upload_file():
         return json.dumps(results, ensure_ascii=False, default=str)
     else:
         return jsonify({"error": "Invalid file type"}), 400
+    
+UPLOAD_FOLDER = 'uploads/feedback'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+@app.route('/submit-feedback', methods=['POST'])
+def submit_feedback():
+    data = request.form.to_dict()
+    data['feedback_id'] = str(uuid.uuid4())
+    data['timestamp'] = datetime.now().isoformat()
+    data['status'] = 'pending'
+    data['ip_address'] = request.remote_addr
+    data['user_agent'] = request.user_agent.string
+    data['resolve_time'] = None
+    data['resolved_by'] = None
+
+    if 'attachment' in request.files:
+        file = request.files['attachment']
+        if file.filename != '':
+            filename = secure_filename(f"{data['timestamp']}_{file.filename}")
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            data['attachment'] = filename
+
+    feedback_file = 'feedback.json'
+    
+    if not os.path.exists(feedback_file):
+        with open(feedback_file, 'w') as f:
+            json.dump([], f)
+
+    try:
+        with open(feedback_file, 'r') as f:
+            content = f.read()
+            feedback_data = json.loads(content) if content else []
+    except json.JSONDecodeError:
+        feedback_data = []
+
+    feedback_data.append(data)
+
+    with open('feedback.json', 'w') as f:
+        json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+
+    return jsonify({"message": "Feedback submitted successfully"}), 200
+
+@app.route('/uploads/feedback/<filename>')
+def serve_feedback_attachment(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/manage-feedback')
+def manage_feedback():
+    try:
+        with open('feedback.json', 'r') as f:
+            feedback_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        feedback_data = []
+    
+    return render_template('manage_feedback.html', feedback=feedback_data)
+
+@app.route('/update-feedback-status', methods=['POST'])
+def update_feedback_status():
+    feedback_id = request.form.get('feedback_id')
+    new_status = request.form.get('status')
+    resolved_by = request.form.get('resolved_by')
+
+    try:
+        with open('feedback.json', 'r') as f:
+            feedback_data = json.load(f)
+        
+        for item in feedback_data:
+            if item['feedback_id'] == feedback_id:
+                item['status'] = new_status
+                item['resolved_by'] = resolved_by
+                if new_status == 'resolved':
+                    item['resolve_time'] = datetime.now().isoformat()
+        
+        with open('feedback.json', 'w') as f:
+            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+        
+        return jsonify({"message": "Feedback status updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.template_filter('parse_timestamp')
+def parse_timestamp(timestamp_str, format_str):
+    try:
+        dt = datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S.%f')
+        return dt.strftime(format_str)
+    except ValueError:
+        return timestamp_str 
+ 
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)

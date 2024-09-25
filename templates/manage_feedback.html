@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Feedback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: "Open Sans", sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        .feedback-item {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .feedback-item:hover {
+            transform: translateY(-2px);
+        }
+        .feedback-item h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .status-pending {
+            color: #ffa500;
+        }
+        .status-in-progress {
+            color: #3498db;
+        }
+        .status-resolved {
+            color: #2ecc71;
+        }
+        select, input[type="text"] {
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: "Open Sans", sans-serif;
+            transition: border-color 0.3s;
+        }
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 700;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: #2980b9;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            transition: background-color 0.3s, color 0.3s;
+            margin: 0 5px;
+            border-radius: 4px;
+        }
+        .tab:hover {
+            background-color: #e0e0e0;
+        }
+        .tab.active {
+            color: white;
+            font-weight: bold;
+        }
+        .tab.all.active {
+            background-color: #3498db;
+        }
+        .tab.pending.active {
+            background-color: #ffa500;
+        }
+        .tab.in-progress.active {
+            background-color: #3498db;
+        }
+        .tab.resolved.active {
+            background-color: #2ecc71;
+        }
+        .status-pending {
+            color: #ffa500;
+        }
+        .status-in-progress {
+            color: #3498db;
+        }
+        .status-resolved {
+            color: #2ecc71;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            margin: 0 5px;
+            padding: 8px 12px;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .pagination button:hover {
+            background-color: #bdc3c7;
+        }
+        .pagination button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        #page-info {
+            margin: 0 10px;
+            align-self: center;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .statistics {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            transition: transform 0.2s;
+        }
+        .stat-item:hover {
+            transform: translateY(-2px);
+        }
+        .stat-item .count {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-item .label {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .stat-pending {
+            color: #ffa500;
+            background-color: rgba(255, 165, 0, 0.1);
+        }
+        .stat-in-progress {
+            color: #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        .stat-resolved {
+            color: #2ecc71;
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Manage Feedback</h1>
+        
+        <div class="statistics">
+            <div class="stat-item stat-pending">
+                <div class="count" id="pending-count">0</div>
+                <div class="label">Pending</div>
+            </div>
+            <div class="stat-item stat-in-progress">
+                <div class="count" id="in-progress-count">0</div>
+                <div class="label">In Progress</div>
+            </div>
+            <div class="stat-item stat-resolved">
+                <div class="count" id="resolved-count">0</div>
+                <div class="label">Resolved</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab all active" onclick="showTab('all')">All</div>
+            <div class="tab pending" onclick="showTab('pending')">Pending</div>
+            <div class="tab in-progress" onclick="showTab('in_progress')">In Progress</div>
+            <div class="tab resolved" onclick="showTab('resolved')">Resolved</div>
+        </div>
+
+        <div id="feedback-list">
+            {% for item in feedback %}
+                <div class="feedback-item" data-status="{{ item.status }}">
+                    <h3>Feedback #{{ item.feedback_id[:8] }}</h3>
+                    <p><strong>Name:</strong> {{ item.name }}</p>
+                    <p><strong>Department:</strong> {{ item.department }}</p>
+                    <p><strong>Content:</strong> {{ item.content }}</p>
+                    <p><strong>Submitted:</strong> {{ item.timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    <p><strong>Status:</strong> <span class="status-{{ item.status }}">{{ item.status }}</span></p>
+                    {% if item.pending_timestamp %}
+                        <p><strong>Pending since:</strong> {{ item.pending_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% endif %}
+                    {% if item.in_progress_timestamp %}
+                        <p><strong>In Progress since:</strong> {{ item.in_progress_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% endif %}
+                    {% if item.resolved_timestamp %}
+                        <p><strong>Resolved on:</strong> {{ item.resolved_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% endif %}
+                    {% if item.attachment %}
+                        <p><strong>Attachment:</strong> <a href="{{ url_for('serve_feedback_attachment', filename=item.attachment) }}" target="_blank">View Attachment</a></p>
+                    {% endif %}
+                    <select id="status-{{ item.feedback_id }}">
+                        <option value="pending" {% if item.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="in_progress" {% if item.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="resolved" {% if item.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                    </select>
+                    <input type="text" id="resolved-by-{{ item.feedback_id }}" placeholder="Resolved by" value="{{ item.resolved_by or '' }}">
+                    <button onclick="updateStatus('{{ item.feedback_id }}')">Update Status</button>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="pagination">
+            <button onclick="changePage(-1)">Previous</button>
+            <span id="page-info">Page 1 of 1</span>
+            <button onclick="changePage(1)">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let currentTab = 'all';
+
+        function updateStatus(feedbackId) {
+            const status = document.getElementById(`status-${feedbackId}`).value;
+            const resolvedBy = document.getElementById(`resolved-by-${feedbackId}`).value;
+            
+            fetch('/update-feedback-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `feedback_id=${feedbackId}&status=${status}&resolved_by=${resolvedBy}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                location.reload();
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the status.');
+            });
+        }
+
+        function showTab(status) {
+            currentTab = status;
+            currentPage = 1;
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const items = document.querySelectorAll('.feedback-item');
+            let visibleItems = 0;
+            items.forEach((item, index) => {
+                const itemStatus = item.dataset.status;
+                const isVisible = (currentTab === 'all' || itemStatus === currentTab) &&
+                                  (index >= (currentPage - 1) * itemsPerPage && index < currentPage * itemsPerPage);
+                item.style.display = isVisible ? 'block' : 'none';
+                if (isVisible) visibleItems++;
+            });
+
+            updatePagination(items.length);
+            updateStatistics();
+        }
+
+        function updatePagination(totalItems) {
+            const pageCount = Math.ceil(totalItems / itemsPerPage);
+            const prevButton = document.querySelector('.pagination button:first-child');
+            const nextButton = document.querySelector('.pagination button:last-child');
+            
+            document.getElementById('page-info').textContent = `Page ${currentPage} of ${pageCount}`;
+            
+            prevButton.disabled = currentPage === 1;
+            nextButton.disabled = currentPage === pageCount;
+            
+            prevButton.classList.toggle('active', currentPage !== 1);
+            nextButton.classList.toggle('active', currentPage !== pageCount);
+        }
+
+        function changePage(direction) {
+            const items = document.querySelectorAll('.feedback-item');
+            const pageCount = Math.ceil(items.length / itemsPerPage);
+            currentPage += direction;
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > pageCount) currentPage = pageCount;
+            updateDisplay();
+        }
+
+        function updateStatistics() {
+            const items = document.querySelectorAll('.feedback-item');
+            let counts = {pending: 0, in_progress: 0, resolved: 0};
+            items.forEach(item => {
+                const status = item.dataset.status;
+                counts[status]++;
+            });
+            document.getElementById('pending-count').textContent = counts.pending;
+            document.getElementById('in-progress-count').textContent = counts.in_progress;
+            document.getElementById('resolved-count').textContent = counts.resolved;
+        }
+
+        // Initial display update
+        updateDisplay();
+    </script>
+</body>
+</html>
