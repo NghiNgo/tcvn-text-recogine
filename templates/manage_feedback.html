@@ -51,9 +51,6 @@
         .status-pending {
             color: #ffa500;
         }
-        .status-in-progress {
-            color: #3498db;
-        }
         .status-resolved {
             color: #2ecc71;
         }
@@ -118,17 +115,11 @@
         .tab.pending.active {
             background-color: #ffa500;
         }
-        .tab.in-progress.active {
-            background-color: #3498db;
-        }
         .tab.resolved.active {
             background-color: #2ecc71;
         }
         .status-pending {
             color: #ffa500;
-        }
-        .status-in-progress {
-            color: #3498db;
         }
         .status-resolved {
             color: #2ecc71;
@@ -191,10 +182,6 @@
             color: #ffa500;
             background-color: rgba(255, 165, 0, 0.1);
         }
-        .stat-in-progress {
-            color: #3498db;
-            background-color: rgba(52, 152, 219, 0.1);
-        }
         .stat-resolved {
             color: #2ecc71;
             background-color: rgba(46, 204, 113, 0.1);
@@ -210,10 +197,6 @@
                 <div class="count" id="pending-count">0</div>
                 <div class="label">Pending</div>
             </div>
-            <div class="stat-item stat-in-progress">
-                <div class="count" id="in-progress-count">0</div>
-                <div class="label">In Progress</div>
-            </div>
             <div class="stat-item stat-resolved">
                 <div class="count" id="resolved-count">0</div>
                 <div class="label">Resolved</div>
@@ -223,7 +206,6 @@
         <div class="tabs">
             <div class="tab all active" onclick="showTab('all')">All</div>
             <div class="tab pending" onclick="showTab('pending')">Pending</div>
-            <div class="tab in-progress" onclick="showTab('in_progress')">In Progress</div>
             <div class="tab resolved" onclick="showTab('resolved')">Resolved</div>
         </div>
 
@@ -239,18 +221,14 @@
                     {% if item.pending_timestamp %}
                         <p><strong>Pending since:</strong> {{ item.pending_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
                     {% endif %}
-                    {% if item.in_progress_timestamp %}
-                        <p><strong>In Progress since:</strong> {{ item.in_progress_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
-                    {% endif %}
-                    {% if item.resolved_timestamp %}
-                        <p><strong>Resolved on:</strong> {{ item.resolved_timestamp|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% if item.resolve_time %}
+                        <p><strong>Resolved on:</strong> {{ item.resolve_time|parse_timestamp('%Y-%m-%d %H:%M:%S') }}</p>
                     {% endif %}
                     {% if item.attachment %}
                         <p><strong>Attachment:</strong> <a href="{{ url_for('serve_feedback_attachment', filename=item.attachment) }}" target="_blank">View Attachment</a></p>
                     {% endif %}
                     <select id="status-{{ item.feedback_id }}">
                         <option value="pending" {% if item.status == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="in_progress" {% if item.status == 'in_progress' %}selected{% endif %}>In Progress</option>
                         <option value="resolved" {% if item.status == 'resolved' %}selected{% endif %}>Resolved</option>
                     </select>
                     <input type="text" id="resolved-by-{{ item.feedback_id }}" placeholder="Resolved by" value="{{ item.resolved_by or '' }}">
@@ -348,7 +326,6 @@
                 counts[status]++;
             });
             document.getElementById('pending-count').textContent = counts.pending;
-            document.getElementById('in-progress-count').textContent = counts.in_progress;
             document.getElementById('resolved-count').textContent = counts.resolved;
         }
 
