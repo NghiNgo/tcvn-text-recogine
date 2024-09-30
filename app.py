@@ -213,9 +213,9 @@ def submit_feedback():
 
     feedback_file = 'feedback.json'
     
-    if not os.path.exists(feedback_file):
-        with open(feedback_file, 'w') as f:
-            json.dump([], f)
+    # if not os.path.exists(feedback_file):
+    #     with open(feedback_file, 'w') as f:
+    #         json.dump([], f)
 
     try:
         with open(feedback_file, 'r') as f:
