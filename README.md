@@ -256,9 +256,16 @@ def submit_feedback():
     #         json.dump([], f)
 
     try:
-        with open(feedback_file, 'r') as f:
+        with open(feedback_file, 'r', encoding='utf-8') as f:
             content = f.read()
             feedback_data = json.loads(content) if content else []
+    except UnicodeDecodeError:
+        try:
+            with open(feedback_file, 'r', encoding='latin-1') as f:
+                content = f.read()
+                feedback_data = json.loads(content) if content else []
+        except json.JSONDecodeError:
+            feedback_data = []
     except json.JSONDecodeError:
         feedback_data = []
 
@@ -276,7 +283,7 @@ def serve_feedback_attachment(filename):
 @app.route('/manage-feedback')
 def manage_feedback():
     try:
-        with open('feedback.json', 'r') as f:
+        with open('feedback.json', 'r', encoding='utf-8') as f:
             feedback_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         feedback_data = []
@@ -290,7 +297,7 @@ def update_feedback_status():
     resolved_by = request.form.get('resolved_by')
 
     try:
-        with open('feedback.json', 'r') as f:
+        with open('feedback.json', 'r', encoding='utf-8') as f:
             feedback_data = json.load(f)
         
         for item in feedback_data:
@@ -300,7 +307,7 @@ def update_feedback_status():
                 if new_status == 'resolved':
                     item['resolve_time'] = datetime.now().isoformat()
         
-        with open('feedback.json', 'w') as f:
+        with open('feedback.json', 'w', encoding='utf-8') as f:
             json.dump(feedback_data, f, indent=2, ensure_ascii=False)
         
         return jsonify({"message": "Feedback status updated successfully"}), 200
