@@ -448,6 +448,10 @@ def parse_timestamp(timestamp_str, format_str):
         background-color: #3498db;
         color: white;
       }
+      .pagination .ellipsis {
+        padding: 8px 12px;
+        color: #2c3e50;
+      }
       .spinner {
         border: 4px solid #f3f3f3;
         border-top: 4px solid #3498db;
@@ -998,7 +1002,10 @@ def parse_timestamp(timestamp_str, format_str):
           <h3>Không tìm thấy</h3>
           <span id="unknown-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item het-hieu-luc" onclick="filterByType('HetHieuLuc')">
+        <div
+          class="stat-item het-hieu-luc"
+          onclick="filterByType('HetHieuLuc')"
+        >
           <h3>Hết hiệu lực</h3>
           <span id="het-hieu-luc-count" class="stat-count">0</span>
         </div>
@@ -1133,7 +1140,7 @@ def parse_timestamp(timestamp_str, format_str):
               const stats = calculateStatistics(allResults);
               document.getElementById("total-count").textContent =
                 Object.entries(stats).reduce((total, [key, value]) => {
-                  return key !== 'HetHieuLuc' ? total + value : total;
+                  return key !== "HetHieuLuc" ? total + value : total;
                 }, 0);
 
               const statItems = {
@@ -1286,10 +1293,7 @@ def parse_timestamp(timestamp_str, format_str):
         {
           version: "1.3",
           date: "2024-09-25",
-          changes: [
-            "Thêm phần góp ý & báo lỗi",
-            "Thêm thống kê Hết hiệu lực",
-          ],
+          changes: ["Thêm phần góp ý & báo lỗi", "Thêm thống kê Hết hiệu lực"],
         },
         {
           version: "1.2",
@@ -1357,14 +1361,54 @@ def parse_timestamp(timestamp_str, format_str):
         const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
         let paginationHtml = '<div class="pagination">';
 
-        for (let i = 1; i <= totalPages; i++) {
-          paginationHtml += `<button onclick="displayResults(${i})" ${
-            i === currentPage ? 'class="active"' : ""
-          }>${i}</button>`;
+        const maxVisiblePages = 5;
+        const ellipsis = '<span class="ellipsis">...</span>';
+
+        if (totalPages <= maxVisiblePages) {
+          // If total pages are less than or equal to maxVisiblePages, show all pages
+          for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += generatePageButton(i);
+          }
+        } else {
+          // Always show first page
+          paginationHtml += generatePageButton(1);
+
+          if (currentPage > 3) {
+            paginationHtml += ellipsis;
+          }
+
+          // Calculate start and end of visible page range
+          let start = Math.max(2, currentPage - 1);
+          let end = Math.min(currentPage + 1, totalPages - 1);
+
+          // Adjust range if at the start or end
+          if (currentPage <= 3) {
+            end = Math.min(maxVisiblePages - 1, totalPages - 1);
+          } else if (currentPage >= totalPages - 2) {
+            start = Math.max(2, totalPages - maxVisiblePages + 2);
+          }
+
+          // Generate buttons for visible pages
+          for (let i = start; i <= end; i++) {
+            paginationHtml += generatePageButton(i);
+          }
+
+          if (currentPage < totalPages - 2) {
+            paginationHtml += ellipsis;
+          }
+
+          // Always show last page
+          paginationHtml += generatePageButton(totalPages);
         }
 
         paginationHtml += "</div>";
         return paginationHtml;
+      }
+
+      function generatePageButton(pageNumber) {
+        return `<button onclick="displayResults(${pageNumber})" ${
+          pageNumber === currentPage ? 'class="active"' : ""
+        }>${pageNumber}</button>`;
       }
 
       function applyFilters() {
