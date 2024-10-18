@@ -16,9 +16,11 @@ PyMuPDF==1.23.26
 PyPDF2==3.0.1
 python-dateutil==2.9.0.post0
 pytz==2024.1
-six==1.16.0
+six==1.12.0
 typing_extensions==4.12.2
 tzdata==2024.1
 waitress==3.0.0
 Werkzeug==3.0.3
 zipp==3.20.0
+python-docx==0.8.11
+textract==1.6.3

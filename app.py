@@ -12,10 +12,32 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
 import uuid
+from docx import Document
+import textract
+import tempfile
 
 app = Flask(__name__)
 os.makedirs(os.path.join(app.root_path, 'uploads', 'feedback'), exist_ok=True)
 
+def extract_text_from_doc(file):
+    if file.filename.endswith('.docx'):
+        doc = Document(file)
+        return '\n\n'.join([paragraph.text for paragraph in doc.paragraphs])
+    elif file.filename.endswith('.doc'):
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.doc') as temp_file:
+            file.save(temp_file.name)
+            temp_file_path = temp_file.name
+
+        try:
+            # Process the temporary file
+            text = textract.process(temp_file_path).decode('utf-8')
+        finally:
+            # Delete the temporary file
+            os.unlink(temp_file_path)
+
+        return text
+    
 def extract_page_text(page):
     return page.extract_text()
 
@@ -29,8 +51,13 @@ def extract_text_from_pdf(pdf_file):
     
     return "\n\n".join(texts)
 
-def process_pdf(pdf_file):
-    text = extract_text_from_pdf(pdf_file)
+def process_file(file):
+    if file.filename.endswith('.pdf'):
+        text = extract_text_from_pdf(file)
+    elif file.filename.endswith('.doc') or file.filename.endswith('.docx'):
+        text = extract_text_from_doc(file)
+    else:
+        raise ValueError("Unsupported file type")
     results = []
     het_hieu_luc_counter = [0]
     patterns = [
@@ -180,8 +207,8 @@ def upload_file():
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
-    if file and file.filename.endswith('.pdf'):
-        processed_data = process_pdf(file)
+    if file and file.filename.lower().endswith(('.pdf', '.doc', '.docx')):
+        processed_data = process_file(file)
         return json.dumps({
             'results': processed_data['results'],
             'het_hieu_luc_count': processed_data['het_hieu_luc_count']
@@ -284,8 +311,8 @@ def parse_timestamp(timestamp_str, format_str):
     except ValueError:
         return timestamp_str 
 
-# if __name__ == '__main__':
-#     app.run(debug=True, host='0.0.0.0', port=5001)
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)
