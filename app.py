@@ -74,7 +74,10 @@ def process_file(file):
         r"TCCS\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?"
+        r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"QĐ",
+        r"NĐ",
+        r"TT"
     ]
 
     # Load the Excel file
@@ -102,12 +105,11 @@ def process_file(file):
     def process_page(page_data):
         page_num, page_text = page_data
         page_results = []
-        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU"]
+        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ", "NĐ", "TT"]
         for pattern in patterns:
             matches = re.finditer(pattern, page_text, re.IGNORECASE)
             for match in matches:
                 phrase = re.sub(r'\s+', '', match.group().strip())
-                
                 line_num = page_text[:match.start()].count('\n') + 1
                 base_text = next((standard for standard in standards if phrase.startswith(standard)), "")
                 
@@ -115,18 +117,31 @@ def process_file(file):
                 if base_text:
                     index = page_text.find(base_text, match.start())
                     if index != -1:
-                        after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
-                        for standard in standards:
-                            if standard in after_text:
-                                after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
-                                break
+                        if base_text == "QĐ" or base_text == "NĐ" or base_text == "TT":
+                            before_text = page_text[index-20:index].strip()
+                            after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
+                            for standard in standards:
+                                if standard in after_text:
+                                    after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                    break
+                            else:
+                                after_text = re.sub(r'\s+', ' ', after_text[:24])
+                            updated_phrase = f"{before_text} {base_text} {after_text}".strip() if base_text else ""
                         else:
-                            after_text = re.sub(r'\s+', ' ', after_text[:24])
+                            after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
+                            for standard in standards:
+                                if standard in after_text:
+                                    after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                    break
+                            else:
+                                after_text = re.sub(r'\s+', ' ', after_text[:24])
 
-                updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
+                            updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
+                    else:
+                        updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
                 updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
-                matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
+                matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() == updated_phrase_normalized), None)
                 matching_results = [
                     handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
                     for i in range(-3, 0)
@@ -139,7 +154,6 @@ def process_file(file):
 
                 if first_col_value is None and ("TCVN" in phrase or "QCVN" in phrase):
                     custom_phrase = updated_phrase.replace("-", ":")
-                    print(custom_phrase)
                     if custom_phrase.startswith("TCVN") or custom_phrase.startswith("QCVN"):
                         base_text = "TCVN" if custom_phrase.startswith("TCVN") else "QCVN"
                         after_text = custom_phrase[4:].strip() if base_text == "TCVN" else custom_phrase[4:].strip()
@@ -152,7 +166,6 @@ def process_file(file):
                                     break
                             else:
                                 after_text = re.sub(r'\s+', ' ', after_text[:24])
-
                     updated_phrase_normalized = re.sub(r'\s+', '', custom_phrase).strip()
                     matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
                     matching_results = [
@@ -182,7 +195,7 @@ def process_file(file):
                     "full_reference": f"{base_text} {after_text}".strip(),
                     "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
                 })
-                
+
         return page_results
 
     pages = list(enumerate(text.split('\n\n'), 1))
