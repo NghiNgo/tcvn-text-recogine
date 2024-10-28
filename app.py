@@ -141,7 +141,24 @@ def process_file(file):
                         updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
                 updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
-                matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() == updated_phrase_normalized), None)
+                if base_text in ["QĐ", "NĐ", "TT"]:
+                    before_numbers = re.findall(r'\d+', before_text)
+                    if before_numbers:
+                        decision_number = before_numbers[-1] 
+
+                        exact_pattern = f"{decision_number}/{base_text}"
+                        matching_check_phrase = next(
+                            (cp for cp in check_phrases 
+                            if exact_pattern in re.sub(r'\s+', '', cp).strip()
+                            and re.findall(r'\d+', cp)[0] == decision_number),
+                            None
+                        )
+                else:
+                    matching_check_phrase = next(
+                        (cp for cp in check_phrases 
+                        if re.sub(r'\s+', '', cp).strip() == updated_phrase_normalized),
+                        None
+                    )
                 matching_results = [
                     handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
                     for i in range(-3, 0)
