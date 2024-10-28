@@ -157,6 +157,9 @@ def process_file(file):
                 base_text = next((standard for standard in standards if phrase.startswith(standard)), "")
                 
                 after_text = ""
+                matching_check_phrase = None  # Initialize here
+                before_text = ""  # Initialize before_text
+
                 if base_text:
                     index = page_text.find(base_text, match.start())
                     if index != -1:
@@ -183,51 +186,25 @@ def process_file(file):
                     else:
                         updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
-                updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
-                if base_text in ["QĐ", "NĐ", "TT"]:
-                    before_numbers = re.findall(r'\d+', before_text)
-                    if before_numbers:
-                        decision_number = before_numbers[-1] 
+                    updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
+                    if base_text in ["QĐ", "NĐ", "TT"]:
+                        before_numbers = re.findall(r'\d+', before_text)
+                        if before_numbers:
+                            decision_number = before_numbers[-1] 
 
-                        exact_pattern = f"{decision_number}/{base_text}"
+                            exact_pattern = f"{decision_number}/{base_text}"
+                            matching_check_phrase = next(
+                                (cp for cp in check_phrases 
+                                if exact_pattern in re.sub(r'\s+', '', cp).strip()
+                                and re.findall(r'\d+', cp)[0] == decision_number),
+                                None
+                            )
+                    else:
                         matching_check_phrase = next(
                             (cp for cp in check_phrases 
-                            if exact_pattern in re.sub(r'\s+', '', cp).strip()
-                            and re.findall(r'\d+', cp)[0] == decision_number),
+                            if re.sub(r'\s+', '', cp).strip() == updated_phrase_normalized),
                             None
                         )
-                else:
-                    matching_check_phrase = next(
-                        (cp for cp in check_phrases 
-                        if re.sub(r'\s+', '', cp).strip() == updated_phrase_normalized),
-                        None
-                    )
-                matching_results = [
-                    handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
-                    for i in range(-3, 0)
-                ] if matching_check_phrase else [None] * 3
-
-                if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
-                    het_hieu_luc_counter[0] += 1
-
-                first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
-
-                if first_col_value is None and ("TCVN" in phrase or "QCVN" in phrase):
-                    custom_phrase = updated_phrase.replace("-", ":")
-                    if custom_phrase.startswith("TCVN") or custom_phrase.startswith("QCVN"):
-                        base_text = "TCVN" if custom_phrase.startswith("TCVN") else "QCVN"
-                        after_text = custom_phrase[4:].strip() if base_text == "TCVN" else custom_phrase[4:].strip()
-                        index = page_text.find(custom_phrase, match.start())
-                        if index != -1:
-                            after_text = page_text[index+4:index+54].strip()
-                            for standard in standards:
-                                if standard in after_text:
-                                    after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
-                                    break
-                            else:
-                                after_text = re.sub(r'\s+', ' ', after_text[:24])
-                    updated_phrase_normalized = re.sub(r'\s+', '', custom_phrase).strip()
-                    matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
                     matching_results = [
                         handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
                         for i in range(-3, 0)
@@ -238,23 +215,49 @@ def process_file(file):
 
                     first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
 
-                page_results.append({
-                    "phrase": updated_phrase,
-                    "page": page_num,
-                    "line": line_num,
-                    "base_text": base_text,
-                    "after_text": after_text,
-                    "updated_phrase": updated_phrase,
-                    "matching_check_phrase": matching_check_phrase,
-                    "first_col_value": first_col_value,
-                    "matching_result_3": matching_results[0],
-                    "matching_result_2": matching_results[1],
-                    "matching_result_1": matching_results[2],
-                    "standard_type": base_text if base_text else "Unknown",
-                    "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
-                    "full_reference": f"{base_text} {after_text}".strip(),
-                    "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
-                })
+                    if first_col_value is None and ("TCVN" in phrase or "QCVN" in phrase):
+                        custom_phrase = updated_phrase.replace("-", ":")
+                        if custom_phrase.startswith("TCVN") or custom_phrase.startswith("QCVN"):
+                            base_text = "TCVN" if custom_phrase.startswith("TCVN") else "QCVN"
+                            after_text = custom_phrase[4:].strip() if base_text == "TCVN" else custom_phrase[4:].strip()
+                            index = page_text.find(custom_phrase, match.start())
+                            if index != -1:
+                                after_text = page_text[index+4:index+54].strip()
+                                for standard in standards:
+                                    if standard in after_text:
+                                        after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                        break
+                                else:
+                                    after_text = re.sub(r'\s+', ' ', after_text[:24])
+                        updated_phrase_normalized = re.sub(r'\s+', '', custom_phrase).strip()
+                        matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
+                        matching_results = [
+                            handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
+                            for i in range(-3, 0)
+                        ] if matching_check_phrase else [None] * 3
+
+                        if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
+                            het_hieu_luc_counter[0] += 1
+
+                        first_col_value = df[first_col].loc[df[first_col].str.strip() == matching_check_phrase].values[0] if matching_check_phrase else None
+
+                    page_results.append({
+                        "phrase": updated_phrase,
+                        "page": page_num,
+                        "line": line_num,
+                        "base_text": base_text,
+                        "after_text": after_text,
+                        "updated_phrase": updated_phrase,
+                        "matching_check_phrase": matching_check_phrase,
+                        "first_col_value": first_col_value,
+                        "matching_result_3": matching_results[0],
+                        "matching_result_2": matching_results[1],
+                        "matching_result_1": matching_results[2],
+                        "standard_type": base_text if base_text else "Unknown",
+                        "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
+                        "full_reference": f"{base_text} {after_text}".strip(),
+                        "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
+                    })
 
         return page_results
 
@@ -384,8 +387,8 @@ def parse_timestamp(timestamp_str, format_str):
     except ValueError:
         return timestamp_str 
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+# if __name__ == '__main__':
+#     app.run(debug=True, host='0.0.0.0', port=5001)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)
