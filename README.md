@@ -10,29 +10,34 @@ This guide will walk you through the process of setting up and deploying the pro
 ## Installation
 
 1. Create a `requirements.txt` file in the project root with the following content:
-  ```
-  blinker==1.8.2
-  click==8.1.7
-  et-xmlfile==1.1.0
-  Flask==3.0.3
-  gunicorn==23.0.0
-  importlib_metadata==8.2.0
-  itsdangerous==2.2.0
-  Jinja2==3.1.4
-  MarkupSafe==2.1.5
-  numpy==1.24.4
-  openpyxl==3.1.5
-  packaging==24.1
-  pandas==2.0.3
-  PyPDF2==3.0.1
-  python-dateutil==2.9.0.post0
-  pytz==2024.1
-  six==1.16.0
-  typing_extensions==4.12.2
-  tzdata==2024.1
-  Werkzeug==3.0.3
-  zipp==3.20.0
-  ```
+```
+blinker==1.8.2
+click==8.1.7
+et-xmlfile==1.1.0
+Flask==3.0.3
+gunicorn==23.0.0
+importlib_metadata==8.2.0
+itsdangerous==2.2.0
+Jinja2==3.1.4
+MarkupSafe==2.1.5
+numpy==1.24.4
+openpyxl==3.1.5
+packaging==24.1
+pandas==2.0.3
+Paste==3.8.0
+PyMuPDF==1.23.26
+PyPDF2==3.0.1
+python-dateutil==2.9.0.post0
+pytz==2024.1
+six==1.12.0
+typing_extensions==4.12.2
+tzdata==2024.1
+waitress==3.0.0
+Werkzeug==3.0.3
+zipp==3.20.0
+python-docx==0.8.11
+textract==1.6.3
+```
 
 2. Create a `app.py` file in the project root with the following content:
 ```
@@ -50,10 +55,32 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
 import uuid
+from docx import Document
+import textract
+import tempfile
 
 app = Flask(__name__)
 os.makedirs(os.path.join(app.root_path, 'uploads', 'feedback'), exist_ok=True)
 
+def extract_text_from_doc(file):
+    if file.filename.endswith('.docx'):
+        doc = Document(file)
+        return '\n\n'.join([paragraph.text for paragraph in doc.paragraphs])
+    elif file.filename.endswith('.doc'):
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.doc') as temp_file:
+            file.save(temp_file.name)
+            temp_file_path = temp_file.name
+
+        try:
+            # Process the temporary file
+            text = textract.process(temp_file_path).decode('utf-8')
+        finally:
+            # Delete the temporary file
+            os.unlink(temp_file_path)
+
+        return text
+    
 def extract_page_text(page):
     return page.extract_text()
 
@@ -67,8 +94,13 @@ def extract_text_from_pdf(pdf_file):
     
     return "\n\n".join(texts)
 
-def process_pdf(pdf_file):
-    text = extract_text_from_pdf(pdf_file)
+def process_file(file):
+    if file.filename.endswith('.pdf'):
+        text = extract_text_from_pdf(file)
+    elif file.filename.endswith('.doc') or file.filename.endswith('.docx'):
+        text = extract_text_from_doc(file)
+    else:
+        raise ValueError("Unsupported file type")
     results = []
     het_hieu_luc_counter = [0]
     patterns = [
@@ -85,7 +117,10 @@ def process_pdf(pdf_file):
         r"TCCS\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?"
+        r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
+        r"QĐ",
+        r"NĐ",
+        r"TT"
     ]
 
     # Load the Excel file
@@ -113,12 +148,11 @@ def process_pdf(pdf_file):
     def process_page(page_data):
         page_num, page_text = page_data
         page_results = []
-        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU"]
+        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ", "NĐ", "TT"]
         for pattern in patterns:
             matches = re.finditer(pattern, page_text, re.IGNORECASE)
             for match in matches:
                 phrase = re.sub(r'\s+', '', match.group().strip())
-                
                 line_num = page_text[:match.start()].count('\n') + 1
                 base_text = next((standard for standard in standards if phrase.startswith(standard)), "")
                 
@@ -126,18 +160,48 @@ def process_pdf(pdf_file):
                 if base_text:
                     index = page_text.find(base_text, match.start())
                     if index != -1:
-                        after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
-                        for standard in standards:
-                            if standard in after_text:
-                                after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
-                                break
+                        if base_text == "QĐ" or base_text == "NĐ" or base_text == "TT":
+                            before_text = page_text[index-20:index].strip()
+                            after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
+                            for standard in standards:
+                                if standard in after_text:
+                                    after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                    break
+                            else:
+                                after_text = re.sub(r'\s+', ' ', after_text[:24])
+                            updated_phrase = f"{before_text} {base_text} {after_text}".strip() if base_text else ""
                         else:
-                            after_text = re.sub(r'\s+', ' ', after_text[:24])
+                            after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
+                            for standard in standards:
+                                if standard in after_text:
+                                    after_text = re.sub(r'\s+', ' ', after_text[:after_text.index(standard) + len(standard)])
+                                    break
+                            else:
+                                after_text = re.sub(r'\s+', ' ', after_text[:24])
 
-                updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
+                            updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
+                    else:
+                        updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
                 updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
-                matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
+                if base_text in ["QĐ", "NĐ", "TT"]:
+                    before_numbers = re.findall(r'\d+', before_text)
+                    if before_numbers:
+                        decision_number = before_numbers[-1] 
+
+                        exact_pattern = f"{decision_number}/{base_text}"
+                        matching_check_phrase = next(
+                            (cp for cp in check_phrases 
+                            if exact_pattern in re.sub(r'\s+', '', cp).strip()
+                            and re.findall(r'\d+', cp)[0] == decision_number),
+                            None
+                        )
+                else:
+                    matching_check_phrase = next(
+                        (cp for cp in check_phrases 
+                        if re.sub(r'\s+', '', cp).strip() == updated_phrase_normalized),
+                        None
+                    )
                 matching_results = [
                     handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
                     for i in range(-3, 0)
@@ -150,7 +214,6 @@ def process_pdf(pdf_file):
 
                 if first_col_value is None and ("TCVN" in phrase or "QCVN" in phrase):
                     custom_phrase = updated_phrase.replace("-", ":")
-                    print(custom_phrase)
                     if custom_phrase.startswith("TCVN") or custom_phrase.startswith("QCVN"):
                         base_text = "TCVN" if custom_phrase.startswith("TCVN") else "QCVN"
                         after_text = custom_phrase[4:].strip() if base_text == "TCVN" else custom_phrase[4:].strip()
@@ -163,7 +226,6 @@ def process_pdf(pdf_file):
                                     break
                             else:
                                 after_text = re.sub(r'\s+', ' ', after_text[:24])
-
                     updated_phrase_normalized = re.sub(r'\s+', '', custom_phrase).strip()
                     matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
                     matching_results = [
@@ -193,7 +255,7 @@ def process_pdf(pdf_file):
                     "full_reference": f"{base_text} {after_text}".strip(),
                     "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
                 })
-                
+
         return page_results
 
     pages = list(enumerate(text.split('\n\n'), 1))
@@ -218,8 +280,8 @@ def upload_file():
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
-    if file and file.filename.endswith('.pdf'):
-        processed_data = process_pdf(file)
+    if file and file.filename.lower().endswith(('.pdf', '.doc', '.docx')):
+        processed_data = process_file(file)
         return json.dumps({
             'results': processed_data['results'],
             'het_hieu_luc_count': processed_data['het_hieu_luc_count']
@@ -322,8 +384,8 @@ def parse_timestamp(timestamp_str, format_str):
     except ValueError:
         return timestamp_str 
 
-# if __name__ == '__main__':
-#     app.run(debug=True, host='0.0.0.0', port=5001)
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001)
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=5000)
@@ -904,6 +966,20 @@ def parse_timestamp(timestamp_str, format_str):
       .stat-item.het-hieu-luc:hover {
         background-color: #c0392b;
       }
+
+      #author-info {
+        background-color: #34495e;
+        color: #ecf0f1;
+        text-align: center;
+        padding: 15px 0;
+        margin-top: 30px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+      }
+
+      #author-info p {
+        margin: 5px 0;
+      }
     </style>
   </head>
   <body>
@@ -917,7 +993,7 @@ def parse_timestamp(timestamp_str, format_str):
     <h1>KIỂM TRA HSDA - IT P8</h1>
     <form id="upload-form">
       <div class="file-input-wrapper">
-        <input type="file" id="pdf-file" accept=".pdf" required />
+        <input type="file" id="pdf-file" accept=".pdf,.doc,.docx" required />
         <label for="pdf-file">Chọn file</label>
       </div>
       <div class="button-row">
@@ -998,6 +1074,18 @@ def parse_timestamp(timestamp_str, format_str):
           <h3>ITU</h3>
           <span id="itu-count" class="stat-count">0</span>
         </div>
+        <div class="stat-item" onclick="filterByType('QĐ')">
+          <h3>Quyết định</h3>
+          <span id="qd-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item" onclick="filterByType('NĐ')">
+          <h3>Nghị định</h3>
+          <span id="nd-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item" onclick="filterByType('TT')">
+          <h3>Thông tư</h3>
+          <span id="tt-count" class="stat-count">0</span>
+        </div>
         <div class="stat-item" onclick="filterByType('Unknown')">
           <h3>Không tìm thấy</h3>
           <span id="unknown-count" class="stat-count">0</span>
@@ -1039,6 +1127,9 @@ def parse_timestamp(timestamp_str, format_str):
         <option value="NFPA">NFPA</option>
         <option value="TC">TC</option>
         <option value="ITU">ITU</option>
+        <option value="QĐ">QĐ</option>
+        <option value="NĐ">NĐ</option>
+        <option value="TT">TT</option>
         <option value="HetHieuLuc">Hết hiệu lực</option>
         <option value="Unknown">Không tìm thấy</option>
       </select>
@@ -1096,7 +1187,10 @@ def parse_timestamp(timestamp_str, format_str):
         </form>
       </div>
     </div>
-
+    <footer id="author-info">
+      <p>Developed by: IT P8 - PECC4</p>
+      <p>Contact: it@pecc4.vn</p>
+    </footer>
     <script>
       let allResults = [];
       let filteredResults = [];
@@ -1158,6 +1252,9 @@ def parse_timestamp(timestamp_str, format_str):
                 nfpa: "NFPA",
                 tc: "TC",
                 itu: "ITU",
+                qd: "QĐ",
+                nd: "NĐ",
+                tt: "TT",
                 unknown: "Unknown",
                 "het-hieu-luc": "HetHieuLuc",
               };
@@ -1290,6 +1387,11 @@ def parse_timestamp(timestamp_str, format_str):
       }
 
       const changeLog = [
+        {
+          version: "1.4",
+          date: "2024-10-28",
+          changes: ["Áp dụng thêm cho định dạng .doc, .docx", "Thêm các thống kê QĐ, TT, NĐ"],
+        },
         {
           version: "1.3",
           date: "2024-09-25",
@@ -1453,7 +1555,7 @@ def parse_timestamp(timestamp_str, format_str):
 
       function isLikeMatch(value, pattern) {
         if (pattern === "all") return true;
-        const regex = new RegExp(`^${pattern}`, "i");
+        const regex = new RegExp(pattern, "i");
         return regex.test(value);
       }
 
@@ -1473,6 +1575,9 @@ def parse_timestamp(timestamp_str, format_str):
           NFPA: 0,
           TC: 0,
           ITU: 0,
+          QĐ: 0,
+          NĐ: 0,
+          TT: 0,
           Unknown: 0,
           HetHieuLuc: 0,
         };
@@ -1500,7 +1605,6 @@ def parse_timestamp(timestamp_str, format_str):
             stats.Unknown++;
           }
         });
-
         return stats;
       }
 
