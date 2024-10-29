@@ -13,30 +13,47 @@ from werkzeug.utils import secure_filename
 from flask import send_from_directory
 import uuid
 from docx import Document
-import textract
-import tempfile
+import pythoncom
+import win32com.client
 
 app = Flask(__name__)
 os.makedirs(os.path.join(app.root_path, 'uploads', 'feedback'), exist_ok=True)
 
 def extract_text_from_doc(file):
-    if file.filename.endswith('.docx'):
-        doc = Document(file)
-        return '\n\n'.join([paragraph.text for paragraph in doc.paragraphs])
-    elif file.filename.endswith('.doc'):
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.doc') as temp_file:
-            file.save(temp_file.name)
-            temp_file_path = temp_file.name
-
+    _, file_extension = os.path.splitext(file.filename.lower())
+    
+    temp_file_path = os.path.join(os.environ.get('TEMP', '/tmp'), file.filename)
+    temp_pdf_path = os.path.join(os.environ.get('TEMP', '/tmp'), f"{os.path.splitext(file.filename)[0]}.pdf")
+    file.save(temp_file_path)
+    
+    try:
+        pythoncom.CoInitialize()
         try:
-            # Process the temporary file
-            text = textract.process(temp_file_path).decode('utf-8')
+            word = win32com.client.Dispatch("Word.Application")
+            word.visible = False
+            doc = word.Documents.Open(temp_file_path)
+            doc.SaveAs(temp_pdf_path, FileFormat=17) 
+            doc.Close()
+            word.Quit()
+        except Exception as e:
+            return f"Error converting to PDF: {str(e)}"
         finally:
-            # Delete the temporary file
-            os.unlink(temp_file_path)
+            pythoncom.CoUninitialize()
 
-        return text
+        with open(temp_pdf_path, 'rb') as pdf_file:
+            return extract_text_from_pdf(pdf_file)
+            
+    finally:
+        if os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+            except:
+                pass
+        if os.path.exists(temp_pdf_path):
+            try:
+                os.remove(temp_pdf_path)
+            except:
+                pass
     
 def extract_page_text(page):
     return page.extract_text()
@@ -75,9 +92,9 @@ def process_file(file):
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"QĐ",
-        r"NĐ",
-        r"TT"
+        r"QĐ-",
+        r"NĐ-",
+        r"TT-"
     ]
 
     # Load the Excel file
