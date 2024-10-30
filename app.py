@@ -92,9 +92,9 @@ def process_file(file):
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"QĐ-",
-        r"NĐ-",
-        r"TT-"
+        r"QĐ-[A-Za-z0-9Đ-]+",
+        r"NĐ-[A-Za-z0-9Đ-]+", 
+        r"TT-[A-Za-z0-9Đ-]+"
     ]
 
     # Load the Excel file
@@ -122,7 +122,7 @@ def process_file(file):
     def process_page(page_data):
         page_num, page_text = page_data
         page_results = []
-        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ", "NĐ", "TT"]
+        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ-", "NĐ-", "TT-"]
         for pattern in patterns:
             matches = re.finditer(pattern, page_text, re.IGNORECASE)
             for match in matches:
@@ -131,13 +131,13 @@ def process_file(file):
                 base_text = next((standard for standard in standards if phrase.startswith(standard)), "")
                 
                 after_text = ""
-                matching_check_phrase = None  # Initialize here
-                before_text = ""  # Initialize before_text
+                matching_check_phrase = None
+                before_text = ""
 
                 if base_text:
                     index = page_text.find(base_text, match.start())
                     if index != -1:
-                        if base_text == "QĐ" or base_text == "NĐ" or base_text == "TT":
+                        if base_text == "QĐ-" or base_text == "NĐ-" or base_text == "TT-":
                             before_text = page_text[index-20:index].strip()
                             after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
                             for standard in standards:
@@ -146,7 +146,7 @@ def process_file(file):
                                     break
                             else:
                                 after_text = re.sub(r'\s+', ' ', after_text[:24])
-                            updated_phrase = f"{before_text} {base_text} {after_text}".strip() if base_text else ""
+                            updated_phrase = f"{before_text}{base_text}{after_text}".strip() if base_text else ""
                         else:
                             after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
                             for standard in standards:
@@ -161,18 +161,18 @@ def process_file(file):
                         updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
                     updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
-                    if base_text in ["QĐ", "NĐ", "TT"]:
-                        before_numbers = re.findall(r'\d+', before_text)
-                        if before_numbers:
-                            decision_number = before_numbers[-1] 
-
-                            exact_pattern = f"{decision_number}/{base_text}"
+                    if base_text in ["QĐ-", "NĐ-", "TT-"]:
+                        doc_number_match = re.search(r'(\d+/\d+/(?:NĐ|QĐ|TT)-\w+)', updated_phrase_normalized)
+                        if doc_number_match:
+                            doc_number = doc_number_match.group(1)
                             matching_check_phrase = next(
                                 (cp for cp in check_phrases 
-                                if exact_pattern in re.sub(r'\s+', '', cp).strip()
-                                and re.findall(r'\d+', cp)[0] == decision_number),
+                                if re.sub(r'\s+', '', cp).strip() in doc_number or 
+                                doc_number in re.sub(r'\s+', '', cp).strip()),
                                 None
                             )
+                        else:
+                            matching_check_phrase = None
                     else:
                         matching_check_phrase = next(
                             (cp for cp in check_phrases 
