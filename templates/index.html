@@ -677,15 +677,15 @@
           <h3>ITU</h3>
           <span id="itu-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('QĐ')">
+        <div class="stat-item" onclick="filterByType('QĐ-')">
           <h3>Quyết định</h3>
           <span id="qd-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('NĐ')">
+        <div class="stat-item" onclick="filterByType('NĐ-')">
           <h3>Nghị định</h3>
           <span id="nd-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('TT')">
+        <div class="stat-item" onclick="filterByType('TT-')">
           <h3>Thông tư</h3>
           <span id="tt-count" class="stat-count">0</span>
         </div>
@@ -730,9 +730,9 @@
         <option value="NFPA">NFPA</option>
         <option value="TC">TC</option>
         <option value="ITU">ITU</option>
-        <option value="QĐ">QĐ</option>
-        <option value="NĐ">NĐ</option>
-        <option value="TT">TT</option>
+        <option value="QĐ-">QĐ</option>
+        <option value="NĐ-">NĐ</option>
+        <option value="TT-">TT</option>
         <option value="HetHieuLuc">Hết hiệu lực</option>
         <option value="Unknown">Không tìm thấy</option>
       </select>
@@ -855,9 +855,9 @@
                 nfpa: "NFPA",
                 tc: "TC",
                 itu: "ITU",
-                qd: "QĐ",
-                nd: "NĐ",
-                tt: "TT",
+                qd: "QĐ-",
+                nd: "NĐ-",
+                tt: "TT-",
                 unknown: "Unknown",
                 "het-hieu-luc": "HetHieuLuc",
               };
@@ -1178,9 +1178,9 @@
           NFPA: 0,
           TC: 0,
           ITU: 0,
-          QĐ: 0,
-          NĐ: 0,
-          TT: 0,
+          "QĐ-": 0,
+          "NĐ-": 0,
+          "TT-": 0,
           Unknown: 0,
           HetHieuLuc: 0,
         };

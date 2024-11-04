@@ -162,13 +162,19 @@ def process_file(file):
                 
                     updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
                     if base_text in ["QĐ-", "NĐ-", "TT-"]:
-                        doc_number_match = re.search(r'(\d+/\d+/(?:NĐ|QĐ|TT)-\w+)', updated_phrase_normalized)
-                        if doc_number_match:
-                            doc_number = doc_number_match.group(1)
+                        original_doc_match = re.search(r'(\d+/(?:\d+/)?(?:NĐ|QĐ|TT)-[A-Za-z]+)', page_text[max(0, index-20):index+100])
+                        if original_doc_match:
+                            doc_number = original_doc_match.group(1)
+                        else:
+                            doc_number_match = re.search(r'(\d+/(?:\d+/)?(?:NĐ|QĐ|TT)-[A-Za-z]+)', updated_phrase_normalized)
+                            doc_number = doc_number_match.group(1) if doc_number_match else None
+                        
+                        if doc_number:
                             matching_check_phrase = next(
                                 (cp for cp in check_phrases 
-                                if re.sub(r'\s+', '', cp).strip() in doc_number or 
-                                doc_number in re.sub(r'\s+', '', cp).strip()),
+                                if (re.sub(r'\s+', '', cp).strip() == doc_number) or  # Exact match
+                                (doc_number.replace('-', '') in re.sub(r'[-\s]', '', cp).strip() and  # Partial match
+                                doc_number.split('-')[1] == re.sub(r'[-\s]', '', cp).strip().split('-')[1])),  # Suffix must match exactly
                                 None
                             )
                         else:
