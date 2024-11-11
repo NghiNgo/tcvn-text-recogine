@@ -13,47 +13,48 @@ from werkzeug.utils import secure_filename
 from flask import send_from_directory
 import uuid
 from docx import Document
-import pythoncom
-import win32com.client
+# import pythoncom
+# import win32com.client
 
 app = Flask(__name__)
 os.makedirs(os.path.join(app.root_path, 'uploads', 'feedback'), exist_ok=True)
 
 def extract_text_from_doc(file):
-    _, file_extension = os.path.splitext(file.filename.lower())
+    return True
+    # _, file_extension = os.path.splitext(file.filename.lower())
     
-    temp_file_path = os.path.join(os.environ.get('TEMP', '/tmp'), file.filename)
-    temp_pdf_path = os.path.join(os.environ.get('TEMP', '/tmp'), f"{os.path.splitext(file.filename)[0]}.pdf")
-    file.save(temp_file_path)
+    # temp_file_path = os.path.join(os.environ.get('TEMP', '/tmp'), file.filename)
+    # temp_pdf_path = os.path.join(os.environ.get('TEMP', '/tmp'), f"{os.path.splitext(file.filename)[0]}.pdf")
+    # file.save(temp_file_path)
     
-    try:
-        pythoncom.CoInitialize()
-        try:
-            word = win32com.client.Dispatch("Word.Application")
-            word.visible = False
-            doc = word.Documents.Open(temp_file_path)
-            doc.SaveAs(temp_pdf_path, FileFormat=17) 
-            doc.Close()
-            word.Quit()
-        except Exception as e:
-            return f"Error converting to PDF: {str(e)}"
-        finally:
-            pythoncom.CoUninitialize()
+    # try:
+    #     pythoncom.CoInitialize()
+    #     try:
+    #         word = win32com.client.Dispatch("Word.Application")
+    #         word.visible = False
+    #         doc = word.Documents.Open(temp_file_path)
+    #         doc.SaveAs(temp_pdf_path, FileFormat=17) 
+    #         doc.Close()
+    #         word.Quit()
+    #     except Exception as e:
+    #         return f"Error converting to PDF: {str(e)}"
+    #     finally:
+    #         pythoncom.CoUninitialize()
 
-        with open(temp_pdf_path, 'rb') as pdf_file:
-            return extract_text_from_pdf(pdf_file)
+    #     with open(temp_pdf_path, 'rb') as pdf_file:
+    #         return extract_text_from_pdf(pdf_file)
             
-    finally:
-        if os.path.exists(temp_file_path):
-            try:
-                os.remove(temp_file_path)
-            except:
-                pass
-        if os.path.exists(temp_pdf_path):
-            try:
-                os.remove(temp_pdf_path)
-            except:
-                pass
+    # finally:
+    #     if os.path.exists(temp_file_path):
+    #         try:
+    #             os.remove(temp_file_path)
+    #         except:
+    #             pass
+    #     if os.path.exists(temp_pdf_path):
+    #         try:
+    #             os.remove(temp_pdf_path)
+    #         except:
+    #             pass
     
 def extract_page_text(page):
     return page.extract_text()
