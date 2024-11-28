@@ -93,9 +93,9 @@ def process_file(file):
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"QĐ-[A-Za-z0-9Đ-]+",
-        r"NĐ-[A-Za-z0-9Đ-]+", 
-        r"TT-[A-Za-z0-9Đ-]+"
+        # r"QĐ-[A-Za-z0-9Đ-]+",
+        # r"NĐ-[A-Za-z0-9Đ-]+", 
+        # r"TT-[A-Za-z0-9Đ-]+"
     ]
 
     # Load the Excel file
@@ -103,8 +103,8 @@ def process_file(file):
     
     # Use the first and last three columns
     first_col = df.columns[1]
-    last_cols = df.columns[-3:]
-    
+    last_cols = df.columns[-5:]
+
     if isinstance(df, pd.DataFrame):
         check_phrases = df[first_col].str.strip().tolist()
     else:
@@ -112,7 +112,7 @@ def process_file(file):
 
     results_dict = {
         f'col_{i}': dict(zip(df[first_col].str.strip(), df[col]))
-        for i, col in enumerate(last_cols, start=-3)
+        for i, col in enumerate(last_cols, start=-5)
     }
 
     def handle_nan(value):
@@ -187,9 +187,9 @@ def process_file(file):
                             None
                         )
                     matching_results = [
-                        handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
-                        for i in range(-3, 0)
-                    ] if matching_check_phrase else [None] * 3
+                            handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
+                        for i in range(-5, 0)
+                    ] if matching_check_phrase else [None] * 5
 
                     if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
                         het_hieu_luc_counter[0] += 1
@@ -214,8 +214,8 @@ def process_file(file):
                         matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
                         matching_results = [
                             handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
-                            for i in range(-3, 0)
-                        ] if matching_check_phrase else [None] * 3
+                            for i in range(-5, 0)
+                        ] if matching_check_phrase else [None] * 5
 
                         if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
                             het_hieu_luc_counter[0] += 1
@@ -231,13 +231,14 @@ def process_file(file):
                         "updated_phrase": updated_phrase,
                         "matching_check_phrase": matching_check_phrase,
                         "first_col_value": first_col_value,
-                        "matching_result_3": matching_results[0],
-                        "matching_result_2": matching_results[1],
-                        "matching_result_1": matching_results[2],
+                        "matching_result_3": matching_results[1],
+                        "matching_result_2": matching_results[2],
+                        "matching_result_1": matching_results[4],
                         "standard_type": base_text if base_text else "Unknown",
                         "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
                         "full_reference": f"{base_text} {after_text}".strip(),
-                        "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
+                        "is_het_hieu_luc": matching_results[1] and 'Hết hiệu lực' in matching_results[1],
+                        "name_col_value": matching_results[0]
                     })
 
         return page_results

@@ -621,7 +621,7 @@
           <h3>Tổng cộng</h3>
           <span id="total-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('TCVN')">
+        <!-- <div class="stat-item" onclick="filterByType('TCVN')">
           <h3>TCVN</h3>
           <span id="tcvn-count" class="stat-count">0</span>
         </div>
@@ -688,10 +688,13 @@
         <div class="stat-item" onclick="filterByType('TT-')">
           <h3>Thông tư</h3>
           <span id="tt-count" class="stat-count">0</span>
-        </div>
-        <div class="stat-item" onclick="filterByType('Unknown')">
-          <h3>Không tìm thấy</h3>
-          <span id="unknown-count" class="stat-count">0</span>
+        </div> -->
+        <div
+          class="stat-item con-hieu-luc"
+          onclick="filterByType('HienHanh')"
+        >
+          <h3>Còn hiệu lực</h3>
+          <span id="con-hieu-luc-count" class="stat-count">0</span>
         </div>
         <div
           class="stat-item het-hieu-luc"
@@ -699,6 +702,10 @@
         >
           <h3>Hết hiệu lực</h3>
           <span id="het-hieu-luc-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item" onclick="filterByType('Unknown')">
+          <h3>Chưa xác định</h3>
+          <span id="unknown-count" class="stat-count">0</span>
         </div>
       </div>
     </div>
@@ -715,7 +722,7 @@
         onchange="applyFilters()"
         style="display: none"
       >
-        <option value="all">Tất cả</option>
+        <!-- <option value="all">Tất cả</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
         <option value="TCXD">TCXD</option>
@@ -732,7 +739,8 @@
         <option value="ITU">ITU</option>
         <option value="QĐ-">QĐ</option>
         <option value="NĐ-">NĐ</option>
-        <option value="TT-">TT</option>
+        <option value="TT-">TT</option> -->
+        <option value="HienHanh">Còn hiệu lực</option>
         <option value="HetHieuLuc">Hết hiệu lực</option>
         <option value="Unknown">Không tìm thấy</option>
       </select>
@@ -816,7 +824,7 @@
           var formData = new FormData();
           var fileInput = document.getElementById("pdf-file");
           formData.append("file", fileInput.files[0]);
-
+          document.getElementById("statistics-container").style.display = "none";
           document.getElementById("loading").style.display = "block";
           document.getElementById("results").innerHTML = "";
           // document.getElementById("search-container").style.display = "none";
@@ -833,38 +841,50 @@
             })
             .then((data) => {
               allResults = data.results;
+              console.log(allResults);
               filteredResults = allResults;
               const stats = calculateStatistics(allResults);
-              document.getElementById("total-count").textContent =
-                Object.entries(stats).reduce((total, [key, value]) => {
-                  return key !== "HetHieuLuc" ? total + value : total;
-                }, 0);
+              const totalCountElement = document.getElementById("total-count");
+
+              if (totalCountElement) {
+                totalCountElement.textContent =
+                  Object.entries(stats).reduce((total, [key, value]) => {
+                    return total + value;
+                  }, 0);
+
+                const parentDiv = totalCountElement.closest(".stat-item");
+                if (parentDiv) {
+                  parentDiv.classList.add("active");
+                }
+              }
 
               const statItems = {
-                tcvn: "TCVN",
-                qcvn: "QCVN",
-                tcxd: "TCXD",
-                tcxdvn: "TCXDVN",
-                tcn: "TCN",
-                aci: "ACI",
-                astm: "ASTM",
-                bht: "BHT",
-                iec: "IEC",
-                ieee: "IEEE",
-                tccs: "TCCS",
-                nfpa: "NFPA",
-                tc: "TC",
-                itu: "ITU",
-                qd: "QĐ-",
-                nd: "NĐ-",
-                tt: "TT-",
+                // tcvn: "TCVN",
+                // qcvn: "QCVN",
+                // tcxd: "TCXD",
+                // tcxdvn: "TCXDVN",
+                // tcn: "TCN",
+                // aci: "ACI",
+                // astm: "ASTM",
+                // bht: "BHT",
+                // iec: "IEC",
+                // ieee: "IEEE",
+                // tccs: "TCCS",
+                // nfpa: "NFPA",
+                // tc: "TC",
+                // itu: "ITU",
+                // qd: "QĐ-",
+                // nd: "NĐ-",
+                // tt: "TT-",
+                "con-hieu-luc": "HienHanh",
                 unknown: "Unknown",
                 "het-hieu-luc": "HetHieuLuc",
               };
 
               for (const [id, type] of Object.entries(statItems)) {
-                const count =
-                  type === "HetHieuLuc" ? data.het_hieu_luc_count : stats[type];
+                // const count =
+                //   type === "HetHieuLuc" ? data.het_hieu_luc_count : stats[type];
+                const count = stats[type];
                 const element = document.getElementById(`${id}-count`);
                 if (element) {
                   element.textContent = count;
@@ -899,6 +919,7 @@
         const clickedItem = document.querySelector(
           `.stat-item[onclick="filterByType('${type}')"]`
         );
+        
         if (clickedItem) {
           clickedItem.classList.add("active");
         }
@@ -926,14 +947,10 @@
             items.forEach((item) => {
               html += `
               <div class="result-item">
-                <strong>Tìm theo:</strong> ${item.phrase}<br>
-                <strong>Trang:</strong> ${item.page}, <strong>Dòng:</strong> ${
-                item.line
-              }<br>
                 ${
                   item.matching_check_phrase
-                    ? `<strong>Mã số:</strong> ${item.first_col_value}<br>`
-                    : `<strong>Mã số:</strong> <span style="color: brown;">Không tìm thấy</span><br>`
+                    ? `<strong>Số hiệu:</strong> ${item.first_col_value}<br>`
+                    : `<strong>Số hiệu:</strong> <span style="color: brown;">Không tìm thấy</span><br>`
                 }
                 ${
                   item.matching_result_3
@@ -945,6 +962,15 @@
                     ? `<strong>Văn bản thay thế:</strong> <span style="color: red;">${item.matching_result_2}</span><br>`
                     : ""
                 }
+                ${
+                  item.matching_result_1
+                    ? `<strong>Văn bản sửa đổi bổ sung:</strong> <span style="color: red;">${item.matching_result_1}</span><br>`
+                    : ""
+                }
+                <strong>Trang:</strong> ${item.page}, <strong>Dòng:</strong> ${
+                  item.line
+                }<br>
+                <strong>Bắt đầu từ: </strong> ${item.phrase}
               </div>`;
             });
             html += "</div>";
@@ -961,12 +987,14 @@
 
       function downloadXLSX() {
         const exportData = filteredResults.map((item) => ({
-          "Tìm theo": item.phrase,
-          Trang: item.page,
-          Dòng: item.line,
-          "Mã số": item.matching_check_phrase || "Không tìm thấy",
+          "Số hiệu": item.matching_check_phrase || "Không tìm thấy",
+          "Tên văn bản": item.name_col_value || "",
           "Tình trạng": item.matching_result_3 || "Không tìm thấy",
           "Văn bản thay thế": item.matching_result_2 || "",
+          "Văn bản sửa đổi bổ sung": item.matching_result_1 || "",
+          // "Tìm theo": item.phrase,
+          Trang: item.page,
+          Dòng: item.line,
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -1142,13 +1170,15 @@
               item.matching_result_1.toLowerCase().includes(searchTerm));
 
           const matchesType =
-            selectedType === "all" ||
+            selectedType === "all"||
             (selectedType === "Unknown" && !item.matching_check_phrase) ||
             (selectedType === "HetHieuLuc" &&
               item.matching_result_3 &&
               item.matching_result_3.includes("Hết hiệu lực")) ||
-            (item.matching_check_phrase &&
-              isLikeMatch(item.matching_check_phrase, selectedType));
+            (selectedType === "HienHanh" &&
+              item.matching_result_3 &&
+              item.matching_result_3.includes("Hiện hành")) ||
+            isLikeMatch(item.matching_check_phrase, selectedType);
 
           return matchesSearch && matchesType;
         });
@@ -1164,23 +1194,24 @@
 
       function calculateStatistics(results) {
         const stats = {
-          TCVN: 0,
-          QCVN: 0,
-          TCXD: 0,
-          TCXDVN: 0,
-          TCN: 0,
-          ACI: 0,
-          ASTM: 0,
-          BHT: 0,
-          IEC: 0,
-          IEEE: 0,
-          TCCS: 0,
-          NFPA: 0,
-          TC: 0,
-          ITU: 0,
-          "QĐ-": 0,
-          "NĐ-": 0,
-          "TT-": 0,
+          // TCVN: 0,
+          // QCVN: 0,
+          // TCXD: 0,
+          // TCXDVN: 0,
+          // TCN: 0,
+          // ACI: 0,
+          // ASTM: 0,
+          // BHT: 0,
+          // IEC: 0,
+          // IEEE: 0,
+          // TCCS: 0,
+          // NFPA: 0,
+          // TC: 0,
+          // ITU: 0,
+          // "QĐ-": 0,
+          // "NĐ-": 0,
+          // "TT-": 0,
+          HienHanh: 0,
           Unknown: 0,
           HetHieuLuc: 0,
         };
@@ -1192,6 +1223,12 @@
           ) {
             stats.HetHieuLuc++;
           }
+          if (
+            item.matching_result_3 &&
+            item.matching_result_3.includes("Hiện hành")
+          ) {
+            stats.HienHanh++;
+          }
           if (item.matching_check_phrase) {
             let matched = false;
             for (const prefix in stats) {
@@ -1200,9 +1237,6 @@
                 matched = true;
                 break;
               }
-            }
-            if (!matched) {
-              stats.Unknown++;
             }
           } else {
             stats.Unknown++;
