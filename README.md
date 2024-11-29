@@ -118,9 +118,9 @@ def process_file(file):
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"QĐ",
-        r"NĐ",
-        r"TT"
+        # r"QĐ-[A-Za-z0-9Đ-]+",
+        # r"NĐ-[A-Za-z0-9Đ-]+", 
+        # r"TT-[A-Za-z0-9Đ-]+"
     ]
 
     # Load the Excel file
@@ -128,8 +128,8 @@ def process_file(file):
     
     # Use the first and last three columns
     first_col = df.columns[1]
-    last_cols = df.columns[-3:]
-    
+    last_cols = df.columns[-5:]
+
     if isinstance(df, pd.DataFrame):
         check_phrases = df[first_col].str.strip().tolist()
     else:
@@ -137,7 +137,7 @@ def process_file(file):
 
     results_dict = {
         f'col_{i}': dict(zip(df[first_col].str.strip(), df[col]))
-        for i, col in enumerate(last_cols, start=-3)
+        for i, col in enumerate(last_cols, start=-5)
     }
 
     def handle_nan(value):
@@ -148,7 +148,7 @@ def process_file(file):
     def process_page(page_data):
         page_num, page_text = page_data
         page_results = []
-        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ", "NĐ", "TT"]
+        standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ-", "NĐ-", "TT-"]
         for pattern in patterns:
             matches = re.finditer(pattern, page_text, re.IGNORECASE)
             for match in matches:
@@ -157,13 +157,13 @@ def process_file(file):
                 base_text = next((standard for standard in standards if phrase.startswith(standard)), "")
                 
                 after_text = ""
-                matching_check_phrase = None  # Initialize here
-                before_text = ""  # Initialize before_text
+                matching_check_phrase = None
+                before_text = ""
 
                 if base_text:
                     index = page_text.find(base_text, match.start())
                     if index != -1:
-                        if base_text == "QĐ" or base_text == "NĐ" or base_text == "TT":
+                        if base_text == "QĐ-" or base_text == "NĐ-" or base_text == "TT-":
                             before_text = page_text[index-20:index].strip()
                             after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
                             for standard in standards:
@@ -172,7 +172,7 @@ def process_file(file):
                                     break
                             else:
                                 after_text = re.sub(r'\s+', ' ', after_text[:24])
-                            updated_phrase = f"{before_text} {base_text} {after_text}".strip() if base_text else ""
+                            updated_phrase = f"{before_text}{base_text}{after_text}".strip() if base_text else ""
                         else:
                             after_text = page_text[index+len(base_text):index+len(base_text)+50].strip()
                             for standard in standards:
@@ -187,18 +187,24 @@ def process_file(file):
                         updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
                     updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
-                    if base_text in ["QĐ", "NĐ", "TT"]:
-                        before_numbers = re.findall(r'\d+', before_text)
-                        if before_numbers:
-                            decision_number = before_numbers[-1] 
-
-                            exact_pattern = f"{decision_number}/{base_text}"
+                    if base_text in ["QĐ-", "NĐ-", "TT-"]:
+                        original_doc_match = re.search(r'(\d+/(?:\d+/)?(?:NĐ|QĐ|TT)-[A-Za-z]+)', page_text[max(0, index-20):index+100])
+                        if original_doc_match:
+                            doc_number = original_doc_match.group(1)
+                        else:
+                            doc_number_match = re.search(r'(\d+/(?:\d+/)?(?:NĐ|QĐ|TT)-[A-Za-z]+)', updated_phrase_normalized)
+                            doc_number = doc_number_match.group(1) if doc_number_match else None
+                        
+                        if doc_number:
                             matching_check_phrase = next(
                                 (cp for cp in check_phrases 
-                                if exact_pattern in re.sub(r'\s+', '', cp).strip()
-                                and re.findall(r'\d+', cp)[0] == decision_number),
+                                if (re.sub(r'\s+', '', cp).strip() == doc_number) or  # Exact match
+                                (doc_number.replace('-', '') in re.sub(r'[-\s]', '', cp).strip() and  # Partial match
+                                doc_number.split('-')[1] == re.sub(r'[-\s]', '', cp).strip().split('-')[1])),  # Suffix must match exactly
                                 None
                             )
+                        else:
+                            matching_check_phrase = None
                     else:
                         matching_check_phrase = next(
                             (cp for cp in check_phrases 
@@ -206,9 +212,9 @@ def process_file(file):
                             None
                         )
                     matching_results = [
-                        handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
-                        for i in range(-3, 0)
-                    ] if matching_check_phrase else [None] * 3
+                            handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
+                        for i in range(-5, 0)
+                    ] if matching_check_phrase else [None] * 5
 
                     if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
                         het_hieu_luc_counter[0] += 1
@@ -233,8 +239,8 @@ def process_file(file):
                         matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
                         matching_results = [
                             handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
-                            for i in range(-3, 0)
-                        ] if matching_check_phrase else [None] * 3
+                            for i in range(-5, 0)
+                        ] if matching_check_phrase else [None] * 5
 
                         if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
                             het_hieu_luc_counter[0] += 1
@@ -250,13 +256,14 @@ def process_file(file):
                         "updated_phrase": updated_phrase,
                         "matching_check_phrase": matching_check_phrase,
                         "first_col_value": first_col_value,
-                        "matching_result_3": matching_results[0],
-                        "matching_result_2": matching_results[1],
-                        "matching_result_1": matching_results[2],
+                        "matching_result_3": matching_results[1],
+                        "matching_result_2": matching_results[2],
+                        "matching_result_1": matching_results[4],
                         "standard_type": base_text if base_text else "Unknown",
                         "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
                         "full_reference": f"{base_text} {after_text}".strip(),
-                        "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
+                        "is_het_hieu_luc": matching_results[1] and 'Hết hiệu lực' in matching_results[1],
+                        "name_col_value": matching_results[0]
                     })
 
         return page_results
@@ -1021,7 +1028,7 @@ def parse_timestamp(timestamp_str, format_str):
           <h3>Tổng cộng</h3>
           <span id="total-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('TCVN')">
+        <!-- <div class="stat-item" onclick="filterByType('TCVN')">
           <h3>TCVN</h3>
           <span id="tcvn-count" class="stat-count">0</span>
         </div>
@@ -1077,21 +1084,24 @@ def parse_timestamp(timestamp_str, format_str):
           <h3>ITU</h3>
           <span id="itu-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('QĐ')">
+        <div class="stat-item" onclick="filterByType('QĐ-')">
           <h3>Quyết định</h3>
           <span id="qd-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('NĐ')">
+        <div class="stat-item" onclick="filterByType('NĐ-')">
           <h3>Nghị định</h3>
           <span id="nd-count" class="stat-count">0</span>
         </div>
-        <div class="stat-item" onclick="filterByType('TT')">
+        <div class="stat-item" onclick="filterByType('TT-')">
           <h3>Thông tư</h3>
           <span id="tt-count" class="stat-count">0</span>
-        </div>
-        <div class="stat-item" onclick="filterByType('Unknown')">
-          <h3>Không tìm thấy</h3>
-          <span id="unknown-count" class="stat-count">0</span>
+        </div> -->
+        <div
+          class="stat-item con-hieu-luc"
+          onclick="filterByType('HienHanh')"
+        >
+          <h3>Còn hiệu lực</h3>
+          <span id="con-hieu-luc-count" class="stat-count">0</span>
         </div>
         <div
           class="stat-item het-hieu-luc"
@@ -1099,6 +1109,10 @@ def parse_timestamp(timestamp_str, format_str):
         >
           <h3>Hết hiệu lực</h3>
           <span id="het-hieu-luc-count" class="stat-count">0</span>
+        </div>
+        <div class="stat-item" onclick="filterByType('Unknown')">
+          <h3>Chưa xác định</h3>
+          <span id="unknown-count" class="stat-count">0</span>
         </div>
       </div>
     </div>
@@ -1115,7 +1129,7 @@ def parse_timestamp(timestamp_str, format_str):
         onchange="applyFilters()"
         style="display: none"
       >
-        <option value="all">Tất cả</option>
+        <!-- <option value="all">Tất cả</option>
         <option value="TCVN">TCVN</option>
         <option value="QCVN">QCVN</option>
         <option value="TCXD">TCXD</option>
@@ -1130,9 +1144,10 @@ def parse_timestamp(timestamp_str, format_str):
         <option value="NFPA">NFPA</option>
         <option value="TC">TC</option>
         <option value="ITU">ITU</option>
-        <option value="QĐ">QĐ</option>
-        <option value="NĐ">NĐ</option>
-        <option value="TT">TT</option>
+        <option value="QĐ-">QĐ</option>
+        <option value="NĐ-">NĐ</option>
+        <option value="TT-">TT</option> -->
+        <option value="HienHanh">Còn hiệu lực</option>
         <option value="HetHieuLuc">Hết hiệu lực</option>
         <option value="Unknown">Không tìm thấy</option>
       </select>
@@ -1216,7 +1231,7 @@ def parse_timestamp(timestamp_str, format_str):
           var formData = new FormData();
           var fileInput = document.getElementById("pdf-file");
           formData.append("file", fileInput.files[0]);
-
+          document.getElementById("statistics-container").style.display = "none";
           document.getElementById("loading").style.display = "block";
           document.getElementById("results").innerHTML = "";
           // document.getElementById("search-container").style.display = "none";
@@ -1233,38 +1248,50 @@ def parse_timestamp(timestamp_str, format_str):
             })
             .then((data) => {
               allResults = data.results;
+              console.log(allResults);
               filteredResults = allResults;
               const stats = calculateStatistics(allResults);
-              document.getElementById("total-count").textContent =
-                Object.entries(stats).reduce((total, [key, value]) => {
-                  return key !== "HetHieuLuc" ? total + value : total;
-                }, 0);
+              const totalCountElement = document.getElementById("total-count");
+
+              if (totalCountElement) {
+                totalCountElement.textContent =
+                  Object.entries(stats).reduce((total, [key, value]) => {
+                    return total + value;
+                  }, 0);
+
+                const parentDiv = totalCountElement.closest(".stat-item");
+                if (parentDiv) {
+                  parentDiv.classList.add("active");
+                }
+              }
 
               const statItems = {
-                tcvn: "TCVN",
-                qcvn: "QCVN",
-                tcxd: "TCXD",
-                tcxdvn: "TCXDVN",
-                tcn: "TCN",
-                aci: "ACI",
-                astm: "ASTM",
-                bht: "BHT",
-                iec: "IEC",
-                ieee: "IEEE",
-                tccs: "TCCS",
-                nfpa: "NFPA",
-                tc: "TC",
-                itu: "ITU",
-                qd: "QĐ",
-                nd: "NĐ",
-                tt: "TT",
+                // tcvn: "TCVN",
+                // qcvn: "QCVN",
+                // tcxd: "TCXD",
+                // tcxdvn: "TCXDVN",
+                // tcn: "TCN",
+                // aci: "ACI",
+                // astm: "ASTM",
+                // bht: "BHT",
+                // iec: "IEC",
+                // ieee: "IEEE",
+                // tccs: "TCCS",
+                // nfpa: "NFPA",
+                // tc: "TC",
+                // itu: "ITU",
+                // qd: "QĐ-",
+                // nd: "NĐ-",
+                // tt: "TT-",
+                "con-hieu-luc": "HienHanh",
                 unknown: "Unknown",
                 "het-hieu-luc": "HetHieuLuc",
               };
 
               for (const [id, type] of Object.entries(statItems)) {
-                const count =
-                  type === "HetHieuLuc" ? data.het_hieu_luc_count : stats[type];
+                // const count =
+                //   type === "HetHieuLuc" ? data.het_hieu_luc_count : stats[type];
+                const count = stats[type];
                 const element = document.getElementById(`${id}-count`);
                 if (element) {
                   element.textContent = count;
@@ -1299,6 +1326,7 @@ def parse_timestamp(timestamp_str, format_str):
         const clickedItem = document.querySelector(
           `.stat-item[onclick="filterByType('${type}')"]`
         );
+        
         if (clickedItem) {
           clickedItem.classList.add("active");
         }
@@ -1326,14 +1354,10 @@ def parse_timestamp(timestamp_str, format_str):
             items.forEach((item) => {
               html += `
               <div class="result-item">
-                <strong>Tìm theo:</strong> ${item.phrase}<br>
-                <strong>Trang:</strong> ${item.page}, <strong>Dòng:</strong> ${
-                item.line
-              }<br>
                 ${
                   item.matching_check_phrase
-                    ? `<strong>Mã số:</strong> ${item.first_col_value}<br>`
-                    : `<strong>Mã số:</strong> <span style="color: brown;">Không tìm thấy</span><br>`
+                    ? `<strong>Số hiệu:</strong> ${item.first_col_value}<br>`
+                    : `<strong>Số hiệu:</strong> <span style="color: brown;">Không tìm thấy</span><br>`
                 }
                 ${
                   item.matching_result_3
@@ -1345,6 +1369,15 @@ def parse_timestamp(timestamp_str, format_str):
                     ? `<strong>Văn bản thay thế:</strong> <span style="color: red;">${item.matching_result_2}</span><br>`
                     : ""
                 }
+                ${
+                  item.matching_result_1
+                    ? `<strong>Văn bản sửa đổi bổ sung:</strong> <span style="color: red;">${item.matching_result_1}</span><br>`
+                    : ""
+                }
+                <strong>Trang:</strong> ${item.page}, <strong>Dòng:</strong> ${
+                  item.line
+                }<br>
+                <strong>Tìm theo: </strong> ${item.phrase}
               </div>`;
             });
             html += "</div>";
@@ -1360,13 +1393,17 @@ def parse_timestamp(timestamp_str, format_str):
       }
 
       function downloadXLSX() {
-        const exportData = filteredResults.map((item) => ({
-          "Tìm theo": item.phrase,
-          Trang: item.page,
-          Dòng: item.line,
-          "Mã số": item.matching_check_phrase || "Không tìm thấy",
+        const exportData = filteredResults
+        .filter((item) => item.matching_check_phrase)
+        .map((item) => ({
+          "Số hiệu": item.matching_check_phrase || "Không tìm thấy",
+          "Tên văn bản": item.name_col_value || "",
           "Tình trạng": item.matching_result_3 || "Không tìm thấy",
           "Văn bản thay thế": item.matching_result_2 || "",
+          "Văn bản sửa đổi bổ sung": item.matching_result_1 || "",
+          // "Tìm theo": item.phrase,
+          Trang: item.page,
+          Dòng: item.line,
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -1542,13 +1579,15 @@ def parse_timestamp(timestamp_str, format_str):
               item.matching_result_1.toLowerCase().includes(searchTerm));
 
           const matchesType =
-            selectedType === "all" ||
+            selectedType === "all"||
             (selectedType === "Unknown" && !item.matching_check_phrase) ||
             (selectedType === "HetHieuLuc" &&
               item.matching_result_3 &&
               item.matching_result_3.includes("Hết hiệu lực")) ||
-            (item.matching_check_phrase &&
-              isLikeMatch(item.matching_check_phrase, selectedType));
+            (selectedType === "HienHanh" &&
+              item.matching_result_3 &&
+              item.matching_result_3.includes("Hiện hành")) ||
+            isLikeMatch(item.matching_check_phrase, selectedType);
 
           return matchesSearch && matchesType;
         });
@@ -1564,23 +1603,24 @@ def parse_timestamp(timestamp_str, format_str):
 
       function calculateStatistics(results) {
         const stats = {
-          TCVN: 0,
-          QCVN: 0,
-          TCXD: 0,
-          TCXDVN: 0,
-          TCN: 0,
-          ACI: 0,
-          ASTM: 0,
-          BHT: 0,
-          IEC: 0,
-          IEEE: 0,
-          TCCS: 0,
-          NFPA: 0,
-          TC: 0,
-          ITU: 0,
-          QĐ: 0,
-          NĐ: 0,
-          TT: 0,
+          // TCVN: 0,
+          // QCVN: 0,
+          // TCXD: 0,
+          // TCXDVN: 0,
+          // TCN: 0,
+          // ACI: 0,
+          // ASTM: 0,
+          // BHT: 0,
+          // IEC: 0,
+          // IEEE: 0,
+          // TCCS: 0,
+          // NFPA: 0,
+          // TC: 0,
+          // ITU: 0,
+          // "QĐ-": 0,
+          // "NĐ-": 0,
+          // "TT-": 0,
+          HienHanh: 0,
           Unknown: 0,
           HetHieuLuc: 0,
         };
@@ -1592,6 +1632,12 @@ def parse_timestamp(timestamp_str, format_str):
           ) {
             stats.HetHieuLuc++;
           }
+          if (
+            item.matching_result_3 &&
+            item.matching_result_3.includes("Hiện hành")
+          ) {
+            stats.HienHanh++;
+          }
           if (item.matching_check_phrase) {
             let matched = false;
             for (const prefix in stats) {
@@ -1600,9 +1646,6 @@ def parse_timestamp(timestamp_str, format_str):
                 matched = true;
                 break;
               }
-            }
-            if (!matched) {
-              stats.Unknown++;
             }
           } else {
             stats.Unknown++;
