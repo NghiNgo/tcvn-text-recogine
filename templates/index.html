@@ -986,7 +986,9 @@
       }
 
       function downloadXLSX() {
-        const exportData = filteredResults.map((item) => ({
+        const exportData = filteredResults
+        .filter((item) => item.matching_check_phrase)
+        .map((item) => ({
           "Số hiệu": item.matching_check_phrase || "Không tìm thấy",
           "Tên văn bản": item.name_col_value || "",
           "Tình trạng": item.matching_result_3 || "Không tìm thấy",
