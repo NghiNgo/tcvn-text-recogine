@@ -102,14 +102,24 @@ def extract_page_text(page):
     return page.extract_text()
 
 def extract_text_from_pdf(pdf_file):
-    pdf_bytes = pdf_file.read()
-    
-    reader = PdfReader(io.BytesIO(pdf_bytes))
-    
-    with multiprocessing.Pool() as pool:
-        texts = pool.map(extract_page_text, reader.pages)
-    
-    return "\n\n".join(texts)
+    try:
+        pdf_bytes = pdf_file.read()
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        texts = []
+        
+        for page in reader.pages:
+            try:
+                text = page.extract_text()
+                texts.append(text)
+            except Exception as e:
+                print(f"Error extracting text from page: {str(e)}")
+                texts.append("")  # Add empty string for failed pages
+                continue
+                
+        return "\n\n".join(texts)
+    except Exception as e:
+        print(f"Error processing PDF: {str(e)}")
+        return ""
 
 def process_file(file):
     if file.filename.endswith('.pdf'):
