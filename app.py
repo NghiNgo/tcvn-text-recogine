@@ -59,14 +59,24 @@ def extract_page_text(page):
     return page.extract_text()
 
 def extract_text_from_pdf(pdf_file):
-    pdf_bytes = pdf_file.read()
-    
-    reader = PdfReader(io.BytesIO(pdf_bytes))
-    
-    with multiprocessing.Pool() as pool:
-        texts = pool.map(extract_page_text, reader.pages)
-    
-    return "\n\n".join(texts)
+    try:
+        pdf_bytes = pdf_file.read()
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        texts = []
+        
+        for page in reader.pages:
+            try:
+                text = page.extract_text()
+                texts.append(text)
+            except Exception as e:
+                print(f"Error extracting text from page: {str(e)}")
+                texts.append("")
+                continue
+                
+        return "\n\n".join(texts)
+    except Exception as e:
+        print(f"Error processing PDF: {str(e)}")
+        return ""
 
 def process_file(file):
     if file.filename.endswith('.pdf'):
@@ -75,6 +85,10 @@ def process_file(file):
         text = extract_text_from_doc(file)
     else:
         raise ValueError("Unsupported file type")
+    
+    with open('text.txt', 'w', encoding='utf-8') as f:
+        f.write(text)
+        
     results = []
     het_hieu_luc_counter = [0]
     patterns = [
@@ -92,9 +106,9 @@ def process_file(file):
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        r"QĐ-[A-Za-z0-9Đ-]+",
-        r"NĐ-[A-Za-z0-9Đ-]+", 
-        r"TT-[A-Za-z0-9Đ-]+"
+        r"QĐ\s*-[A-Z0-9gĐ\s\r\n-]+\b",
+        r"NĐ\s*-[A-Z0-9gĐ\s\r\n-]+\b",
+        r"TT\s*-[A-Z0-9gĐ\s\r\n-]+\b"
     ]
 
     # Load the Excel file
@@ -102,8 +116,8 @@ def process_file(file):
     
     # Use the first and last three columns
     first_col = df.columns[1]
-    last_cols = df.columns[-3:]
-    
+    last_cols = df.columns[-5:]
+
     if isinstance(df, pd.DataFrame):
         check_phrases = df[first_col].str.strip().tolist()
     else:
@@ -111,7 +125,7 @@ def process_file(file):
 
     results_dict = {
         f'col_{i}': dict(zip(df[first_col].str.strip(), df[col]))
-        for i, col in enumerate(last_cols, start=-3)
+        for i, col in enumerate(last_cols, start=-5)
     }
 
     def handle_nan(value):
@@ -124,7 +138,7 @@ def process_file(file):
         page_results = []
         standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ-", "NĐ-", "TT-"]
         for pattern in patterns:
-            matches = re.finditer(pattern, page_text, re.IGNORECASE)
+            matches = re.finditer(pattern, page_text)
             for match in matches:
                 phrase = re.sub(r'\s+', '', match.group().strip())
                 line_num = page_text[:match.start()].count('\n') + 1
@@ -135,7 +149,7 @@ def process_file(file):
                 before_text = ""
 
                 if base_text:
-                    index = page_text.find(base_text, match.start())
+                    index = match.start()
                     if index != -1:
                         if base_text == "QĐ-" or base_text == "NĐ-" or base_text == "TT-":
                             before_text = page_text[index-20:index].strip()
@@ -160,7 +174,8 @@ def process_file(file):
                     else:
                         updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
-                    updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
+                    updated_phrase = re.sub(r'--', '-', updated_phrase)
+                    updated_phrase_normalized = re.sub(r'\s+', ' ', updated_phrase).strip()
                     if base_text in ["QĐ-", "NĐ-", "TT-"]:
                         original_doc_match = re.search(r'(\d+/(?:\d+/)?(?:NĐ|QĐ|TT)-[A-Za-z]+)', page_text[max(0, index-20):index+100])
                         if original_doc_match:
@@ -170,13 +185,16 @@ def process_file(file):
                             doc_number = doc_number_match.group(1) if doc_number_match else None
                         
                         if doc_number:
-                            matching_check_phrase = next(
-                                (cp for cp in check_phrases 
-                                if (re.sub(r'\s+', '', cp).strip() == doc_number) or  # Exact match
-                                (doc_number.replace('-', '') in re.sub(r'[-\s]', '', cp).strip() and  # Partial match
-                                doc_number.split('-')[1] == re.sub(r'[-\s]', '', cp).strip().split('-')[1])),  # Suffix must match exactly
-                                None
-                            )
+                            try:
+                                matching_check_phrase = next(
+                                    (cp for cp in check_phrases 
+                                    if (re.sub(r'\s+', ' ', cp).strip() == doc_number) or  # Exact match
+                                    (doc_number.replace('-', '') in re.sub(r'[-\s]', '', cp).strip() and  # Partial match
+                                    doc_number.split('-')[1] == re.sub(r'[-\s]', '', cp).strip().split('-')[1])),  # Suffix must match exactly
+                                    None
+                                )
+                            except Exception:
+                                matching_check_phrase = None
                         else:
                             matching_check_phrase = None
                     else:
@@ -186,9 +204,9 @@ def process_file(file):
                             None
                         )
                     matching_results = [
-                        handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
-                        for i in range(-3, 0)
-                    ] if matching_check_phrase else [None] * 3
+                            handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
+                        for i in range(-5, 0)
+                    ] if matching_check_phrase else [None] * 5
 
                     if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
                         het_hieu_luc_counter[0] += 1
@@ -213,8 +231,8 @@ def process_file(file):
                         matching_check_phrase = next((cp for cp in check_phrases if re.sub(r'\s+', '', cp).strip() in updated_phrase_normalized), None)
                         matching_results = [
                             handle_nan(results_dict[f'col_{i}'].get(matching_check_phrase))
-                            for i in range(-3, 0)
-                        ] if matching_check_phrase else [None] * 3
+                            for i in range(-5, 0)
+                        ] if matching_check_phrase else [None] * 5
 
                         if matching_results[0] and 'Hết hiệu lực' in matching_results[0]:
                             het_hieu_luc_counter[0] += 1
@@ -230,13 +248,14 @@ def process_file(file):
                         "updated_phrase": updated_phrase,
                         "matching_check_phrase": matching_check_phrase,
                         "first_col_value": first_col_value,
-                        "matching_result_3": matching_results[0],
-                        "matching_result_2": matching_results[1],
-                        "matching_result_1": matching_results[2],
+                        "matching_result_3": matching_results[1],
+                        "matching_result_2": matching_results[2],
+                        "matching_result_1": matching_results[4],
                         "standard_type": base_text if base_text else "Unknown",
                         "numeric_part": re.search(r'\d+', phrase).group() if re.search(r'\d+', phrase) else "",
                         "full_reference": f"{base_text} {after_text}".strip(),
-                        "is_het_hieu_luc": matching_results[0] and 'Hết hiệu lực' in matching_results[0]
+                        "is_het_hieu_luc": matching_results[1] and 'Hết hiệu lực' in matching_results[1],
+                        "name_col_value": matching_results[0]
                     })
 
         return page_results
