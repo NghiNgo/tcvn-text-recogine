@@ -86,6 +86,10 @@ def process_file(file):
         text = extract_text_from_doc(file)
     else:
         raise ValueError("Unsupported file type")
+    
+    with open('text.txt', 'w', encoding='utf-8') as f:
+        f.write(text)
+        
     results = []
     het_hieu_luc_counter = [0]
     patterns = [
@@ -103,9 +107,9 @@ def process_file(file):
         r"NFPA\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"TC\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
         r"ITU(?:-[TR])?\s*\d+(?:[-:]\d+)?(?:[-:]\d+)?(?:\s*:\s*\d+(?:\s*\d+)?)?",
-        # r"QĐ-[A-Za-z0-9Đ-]+",
-        # r"NĐ-[A-Za-z0-9Đ-]+", 
-        # r"TT-[A-Za-z0-9Đ-]+"
+        r"QĐ\s*-[A-Z0-9gĐ\s\r\n-]+\b",
+        r"NĐ\s*-[A-Z0-9gĐ\s\r\n-]+\b",
+        r"TT\s*-[A-Z0-9gĐ\s\r\n-]+\b"
     ]
 
     # Load the Excel file
@@ -135,7 +139,7 @@ def process_file(file):
         page_results = []
         standards = ["TCVN", "QCVN", "TCXD", "TCXDVN", "TCN", "ACI", "ASTM", "BHT", "IEC", "IEEE", "TCCS", "NFPA", "TC", "ITU", "QĐ-", "NĐ-", "TT-"]
         for pattern in patterns:
-            matches = re.finditer(pattern, page_text, re.IGNORECASE)
+            matches = re.finditer(pattern, page_text)
             for match in matches:
                 phrase = re.sub(r'\s+', '', match.group().strip())
                 line_num = page_text[:match.start()].count('\n') + 1
@@ -146,7 +150,7 @@ def process_file(file):
                 before_text = ""
 
                 if base_text:
-                    index = page_text.find(base_text, match.start())
+                    index = match.start()
                     if index != -1:
                         if base_text == "QĐ-" or base_text == "NĐ-" or base_text == "TT-":
                             before_text = page_text[index-20:index].strip()
@@ -171,7 +175,8 @@ def process_file(file):
                     else:
                         updated_phrase = f"{base_text} {after_text}".strip() if base_text else ""
                 
-                    updated_phrase_normalized = re.sub(r'\s+', '', updated_phrase).strip()
+                    updated_phrase = re.sub(r'--', '-', updated_phrase)
+                    updated_phrase_normalized = re.sub(r'\s+', ' ', updated_phrase).strip()
                     if base_text in ["QĐ-", "NĐ-", "TT-"]:
                         original_doc_match = re.search(r'(\d+/(?:\d+/)?(?:NĐ|QĐ|TT)-[A-Za-z]+)', page_text[max(0, index-20):index+100])
                         if original_doc_match:
@@ -181,13 +186,16 @@ def process_file(file):
                             doc_number = doc_number_match.group(1) if doc_number_match else None
                         
                         if doc_number:
-                            matching_check_phrase = next(
-                                (cp for cp in check_phrases 
-                                if (re.sub(r'\s+', '', cp).strip() == doc_number) or  # Exact match
-                                (doc_number.replace('-', '') in re.sub(r'[-\s]', '', cp).strip() and  # Partial match
-                                doc_number.split('-')[1] == re.sub(r'[-\s]', '', cp).strip().split('-')[1])),  # Suffix must match exactly
-                                None
-                            )
+                            try:
+                                matching_check_phrase = next(
+                                    (cp for cp in check_phrases 
+                                    if (re.sub(r'\s+', ' ', cp).strip() == doc_number) or  # Exact match
+                                    (doc_number.replace('-', '') in re.sub(r'[-\s]', '', cp).strip() and  # Partial match
+                                    doc_number.split('-')[1] == re.sub(r'[-\s]', '', cp).strip().split('-')[1])),  # Suffix must match exactly
+                                    None
+                                )
+                            except Exception:
+                                matching_check_phrase = None
                         else:
                             matching_check_phrase = None
                     else:
